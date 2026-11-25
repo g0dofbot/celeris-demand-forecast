@@ -1,0 +1,14 @@
+# Celeris Automobili - demand forecasting pipeline
+# Pinned to the exact versions the Phase 0 profiler was verified against.
+# Python 3.14.5 (project .venv on D:).
+pandas==3.0.6
+numpy==2.5.5
+pyarrow==26.0.1
+scipy==1.18.1
+scikit-learn==1.9.1
+lightgbm==4.7.0
+statsmodels==0.15.0
+streamlit==1.67.0
+plotly==7.1.0
+matplotlib==3.11.2
+pytest==9.2.0
