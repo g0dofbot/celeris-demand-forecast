@@ -187,9 +187,22 @@ class Report:
             "evidence": jsonable(evidence),
         })
 
-    def verdict(self, phase: int, name: str, ok: bool, detail: str = "") -> None:
-        self.verdicts.append({"phase": phase, "check": name, "ok": bool(ok), "detail": detail})
-        self.p(f"[{'PASS' if ok else 'FAIL'}] {name}" + (f" - {detail}" if detail else ""))
+    def verdict(self, phase: int, name: str, ok: bool, detail: str = "",
+                finding: bool = False) -> None:
+        """Record a check; ``finding=True`` marks a raw-data defect, not a broken check.
+
+        Phase 0 is read-only by design, so a defect it discovers is a result rather
+        than a failure. Those are labelled ``[FINDING]`` and left to Phase 1, which
+        repairs them and re-tests the same rule.
+        """
+        kind = "finding" if finding and not ok else "check"
+        self.verdicts.append({"phase": phase, "check": name, "kind": kind,
+                              "ok": bool(ok), "detail": detail})
+        label = "FINDING" if kind == "finding" else ("PASS" if ok else "FAIL")
+        suffix = f" - {detail}" if detail else ""
+        if kind == "finding":
+            suffix += " (raw-data defect; repaired by Phase 1)"
+        self.p(f"[{label}] {name}{suffix}")
 
     # -- persistence -------------------------------------------------------- #
     def save_table(self, name: str, frame: pd.DataFrame, out_dir: Path) -> None:
@@ -1099,9 +1112,10 @@ def section_train(report: Report, raw: dict[str, pd.DataFrame], master: pd.DataF
                    bool(parsed_ok.all() or parsed_ok.mean() > 0.999),
                    f"{int((~parsed_ok).sum()):,} unparseable Date values")
     report.verdict(0, "Units_Sold numeric", bool(units_stats["blank"] == 0 and units_stats["unparseable"] == 0),
-                   f"{units_stats['blank']:,} blank, {units_stats['unparseable']:,} unparseable")
+                   f"{units_stats['blank']:,} blank, {units_stats['unparseable']:,} unparseable",
+                   finding=True)
     report.verdict(0, "No negative units", bool(units_stats["negative"] == 0),
-                   f"{units_stats['negative']:,} negatives")
+                   f"{units_stats['negative']:,} negatives", finding=True)
 
     return {"frame": frame, "grid": grid, "months": list(expected)}
 
