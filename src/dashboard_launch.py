@@ -77,8 +77,6 @@ OPTIONAL: dict[str, str] = {
     "features_report": "features_report.json",
     "profile_report": "profile_report.json",
 }
-PAGES = ["Overview", "Demand explorer", "Forecast", "Validation", "Anomalies",
-         "Data quality", "Assumptions"]
 PAGE_TITLES = {
     "Overview": "Planning overview",
     "Demand explorer": "Demand explorer",
@@ -88,10 +86,12 @@ PAGE_TITLES = {
     "Data quality": "Data quality and reconciliation",
     "Assumptions": "Assumptions and limitations",
 }
+PAGES = list(PAGE_TITLES)
 TABLE_SUFFIXES = {".parquet", ".csv"}
 FILTER_KEYS = {"family": "flt_family", "sku": "flt_sku", "region": "flt_region",
                "channel": "flt_channel", "customer": "flt_customer"}
 HISTORY_COLUMNS = ("Product_Family", "SKU_ID", "Region", "Sales_Channel", "Customer_Name")
+CELL_COLUMNS = ("SKU_ID", "Region")
 
 
 # --------------------------------------------------------------------------- #
@@ -482,6 +482,11 @@ def apply_cell_filters(cells: pd.DataFrame, filters: dict) -> pd.DataFrame:
     return view
 
 
+def band_ratios(monthly: pd.DataFrame) -> tuple[float, float]:
+    """The p10/p90 multipliers of the holdout monthly ratio."""
+    return float(monthly["ratio_p10"].iloc[0]), float(monthly["ratio_p90"].iloc[0])
+
+
 def filtered_history(frames: dict, filters: dict) -> pd.DataFrame:
     """Monthly order-book units and revenue for the shared slice.
 
@@ -499,11 +504,11 @@ def filtered_history(frames: dict, filters: dict) -> pd.DataFrame:
         units=("observed_units", "sum"), revenue=("revenue_recomputed", "sum"))
 
 
-def band_chart(history: pd.DataFrame, forecast: pd.DataFrame, title: str,
-               unit_label: str = "units") -> go.Figure:
+def band_chart(forecast: pd.DataFrame, title: str, history: pd.DataFrame | None = None
+               ) -> go.Figure:
     """History line, forecast line and a multiplicative 80% band."""
     figure = go.Figure()
-    if len(history):
+    if history is not None and len(history):
         figure.add_trace(go.Scatter(x=month_axis(history), y=history["value"],
                                     name="actual demand", mode="lines",
                                     line=dict(color="#1f4e79", width=2)))
@@ -520,8 +525,7 @@ def band_chart(history: pd.DataFrame, forecast: pd.DataFrame, title: str,
                                     line=dict(color="#d67828", width=2)))
     figure.update_layout(title=title, height=420, hovermode="x unified",
                          legend=dict(orientation="h", y=1.02, x=0),
-                         margin=dict(l=10, r=10, t=70, b=10),
-                         yaxis_title=unit_label)
+                         margin=dict(l=10, r=10, t=70, b=10), yaxis_title="units")
     return figure
 
 
@@ -572,13 +576,10 @@ def frame_download(frame: pd.DataFrame, name: str, label: str) -> None:
 # --------------------------------------------------------------------------- #
 def page_overview(frames: dict, filters: dict) -> None:
     monthly = frames["forecast_monthly"].copy().sort_values("Month")
-    summary = frames["monthly_summary"].copy().sort_values("Month")
     monthly["Month"] = month_axis(monthly)
-    summary["Month"] = month_axis(summary)
 
     cells = apply_cell_filters(frames["forecast_cells"], filters)
-    anomalies = apply_history_filters(frames["anomalies"], filters,
-                                      columns=("SKU_ID", "Region"))
+    anomalies = apply_history_filters(frames["anomalies"], filters, columns=CELL_COLUMNS)
     history = filtered_history(frames, filters)
     scores = frames["backtest_scores"].set_index("model")
     shipped = scores.loc["blend"]
@@ -606,13 +607,13 @@ def page_overview(frames: dict, filters: dict) -> None:
         ("Anomalies flagged", f"{len(anomalies):,}", None),
     ])
 
-    ratio_low = float(monthly["ratio_p10"].iloc[0])
-    ratio_high = float(monthly["ratio_p90"].iloc[0])
+    ratio_low, ratio_high = band_ratios(monthly)
     units = pd.DataFrame({"Month": outlook["Month"], "value": outlook["units"],
                           "low": outlook["units"] * ratio_low,
                           "high": outlook["units"] * ratio_high})
-    st.plotly_chart(band_chart(history.rename(columns={"units": "value"}), units,
-                               "Demand and the 19-month outlook"), width="stretch")
+    st.plotly_chart(band_chart(units, "Demand and the 19-month outlook",
+                               history.rename(columns={"units": "value"})),
+                    width="stretch")
     st.plotly_chart(revenue_chart(history, outlook, "Booked revenue and the forecast at list price"),
                     width="stretch")
     st.caption("Revenue is the units forecast at the list price Phase 3 carried into the "
@@ -664,8 +665,7 @@ def page_overview(frames: dict, filters: dict) -> None:
 # --------------------------------------------------------------------------- #
 def page_explorer(frames: dict, filters: dict) -> None:
     history = apply_history_filters(frames["demand_customer"], filters)
-    register = apply_history_filters(frames["anomalies"], filters,
-                                     columns=("SKU_ID", "Region"))
+    register = apply_history_filters(frames["anomalies"], filters, columns=CELL_COLUMNS)
     panel = frames["demand_monthly"]
 
     st.markdown("### Family, SKU, region, customer")
@@ -805,14 +805,12 @@ def page_forecast(frames: dict, filters: dict) -> None:
                 "Widen a filter to see the slice.")
         return
 
-    ratio_low = float(monthly["ratio_p10"].iloc[0])
-    ratio_high = float(monthly["ratio_p90"].iloc[0])
+    ratio_low, ratio_high = band_ratios(monthly)
     series = view.groupby("Month", as_index=False)[["forecast_units", "forecast_revenue"]].sum()
     series["value"] = series["forecast_units"]
     series["low"] = series["value"] * ratio_low
     series["high"] = series["value"] * ratio_high
-    st.plotly_chart(band_chart(pd.DataFrame(columns=["Month", "value"]), series,
-                               f"Monthly demand - {slice_label}, {region}", "units"),
+    st.plotly_chart(band_chart(series, f"Monthly demand - {slice_label}, {region}"),
                     width="stretch")
     st.caption("The band applies the holdout monthly ratio (p10/p90) to the slice total.")
 
@@ -865,8 +863,8 @@ def page_validation(frames: dict, filters: dict) -> None:
         display[column] = (display[column] * 100).round(1)
     display = display.rename(columns={
         "model": "Model", "family": "Family", "wape": "Cell WAPE %",
-        "monthly_wape": "Monthly WAPE %", "bias": "Bias %", "skill_vs_naive": "Skill vs naive %",
-        "mae": "MAE", "rmse": "RMSE", "rows": "Rows"})
+        "monthly_wape": "Monthly WAPE %", "bias": "Bias %",
+        "skill_vs_naive": "Skill vs naive %", "rows": "Rows"})
     st.dataframe(display[["Model", "Family", "Cell WAPE %", "Monthly WAPE %", "Bias %",
                           "Skill vs naive %", "Rows"]], width="stretch", hide_index=True)
 
@@ -930,8 +928,7 @@ def page_validation(frames: dict, filters: dict) -> None:
         st.markdown("**Worst keys in the holdout**")
         cells = frames.get("backtest_cells")
         if cells is not None and len(cells):
-            cells = cells.loc[cells["SKU_ID"].isin(filters["sku"])] if filters["sku"] else cells
-            cells = cells.loc[cells["Region"].isin(filters["region"])] if filters["region"] else cells
+            cells = apply_history_filters(cells, filters, columns=CELL_COLUMNS)
             worst = cells.assign(error=(cells["blend"] - cells["actual"]).abs()).nlargest(
                 12, "error")[["Month", "SKU_ID", "Region", "actual", "blend", "error"]].copy()
             worst["Month"] = pd.to_datetime(worst["Month"]).dt.strftime("%Y-%m")
@@ -950,8 +947,7 @@ def page_validation(frames: dict, filters: dict) -> None:
 # page: anomalies
 # --------------------------------------------------------------------------- #
 def page_anomalies(frames: dict, filters: dict) -> None:
-    register = apply_history_filters(frames["anomalies"].copy(), filters,
-                                     columns=("SKU_ID", "Region"))
+    register = apply_history_filters(frames["anomalies"].copy(), filters, columns=CELL_COLUMNS)
     summary = frames["monthly_summary"].copy()
     summary["Month"] = month_axis(summary)
     register["Month"] = month_axis(register)
@@ -1092,11 +1088,13 @@ def page_assumptions(frames: dict) -> None:
     sources = []
     for name, relative in {**REQUIRED, **OPTIONAL}.items():
         path = resolve(frames["_out_dir"], relative)
-        if path.exists():
-            sources.append({"panel": name, "file": relative,
-                            "modified": time.strftime("%Y-%m-%d %H:%M",
-                                                      time.localtime(path.stat().st_mtime)),
-                            "kilobytes": round(path.stat().st_size / 1024, 1)})
+        if not path.exists():
+            continue
+        stat = path.stat()
+        sources.append({"panel": name, "file": relative,
+                        "modified": time.strftime("%Y-%m-%d %H:%M",
+                                                  time.localtime(stat.st_mtime)),
+                        "kilobytes": round(stat.st_size / 1024, 1)})
     st.dataframe(pd.DataFrame(sources), width="stretch", hide_index=True)
 
 
