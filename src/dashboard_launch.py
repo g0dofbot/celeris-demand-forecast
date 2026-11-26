@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 """Phase 5 - Planning control tower (Streamlit app over outputs/).
 
-The dashboard is a pure reader.  Every number it shows comes from a file that
-phases 1-4 already wrote under ``outputs/``; it recomputes nothing, reads no raw
-CSV, and never touches the delivered data folder.  That is enforced by
+The dashboard is a reader over ``outputs/``.  Every number it shows comes from a
+file that phases 1-4 already wrote; it opens no raw CSV and never touches the
+delivered data folder.  The Core views only filter and sum the columns they are
+given.  The two Advanced views carry one derived statistic each, computed from
+those same columns and labelled on the page: the lead/lag correlation of the
+Phase 3 macro panel, and the P90 coverage window the planner sets.  Neither
+replaces a pipeline number or writes one back.  That contract is enforced by
 ``resolve`` (every declared path must stay inside the outputs directory) and by
 a contract test that asserts the module declares no path outside it.
 
@@ -96,8 +100,16 @@ PAGE_TITLES = {
     "Macro lead/lag": "Macro lead/lag analysis",
     "Procurement plan": "Procurement plan at P90",
 }
-CORE_PAGES = list(PAGE_TITLES)[:7]
-ADVANCED_PAGES = list(PAGE_TITLES)[7:]
+CORE_PAGES = [
+    "Overview",
+    "Demand explorer",
+    "Forecast",
+    "Validation",
+    "Anomalies",
+    "Data quality",
+    "Assumptions",
+]
+ADVANCED_PAGES = ["Macro lead/lag", "Procurement plan"]
 PAGES = CORE_PAGES + ADVANCED_PAGES
 TABLE_SUFFIXES = {".parquet", ".csv"}
 FILTER_KEYS = {"family": "flt_family", "sku": "flt_sku", "region": "flt_region",
