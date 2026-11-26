@@ -1,0 +1,6 @@
+rule_id,issue,action,rows_affected,detail
+FC-PANEL,demand history rebuilt on a pairs x months grid,"lags are recomputed from this grid, never read from the feature table",318879,"239,937 observed/demand cells, NaN elsewhere (absence is not zero)"
+FC-BLEND,blend weight is a free parameter,selected on an inner 19-month window inside the fit period; the outer holdout only sees the resulting fixed weight,55247,w=0.6 chosen at 2023-09; holdout never used
+FC-BACKTEST,candidates scored forward in time at the true horizon,"fit strictly before 2025-04, then 19 recursive months",56613,selected blend; naive WAPE 0.4642
+FC-POST-EOL,test keys after the SKU's EOL month,forecast exactly zero - the ERP records no sales after EOL,156,not a clip: the Phase 1 ledger shows 0 post-EOL sales rows
+FC-UNCERTAINTY,multiplicative error band on the cell forecast,"prediction x exp(+/- 1.28 x sigma), sigma from holdout log ratios",58219,sigma 0.804; aggregate band from monthly holdout ratios p10 0.89 / p90 1.10

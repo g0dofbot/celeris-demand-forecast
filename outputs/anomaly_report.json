@@ -1,0 +1,297 @@
+{
+  "meta": {
+    "phase": 2,
+    "generated_at": "2026-11-25T16:46:23",
+    "runtime_seconds": 10.59,
+    "pandas": "3.0.6",
+    "numpy": "2.5.5",
+    "python": "3.14.5"
+  },
+  "metrics": {
+    "baseline": {
+      "usable_cells": 239937,
+      "coverage": 1.0,
+      "flagged_cells": 2455,
+      "flag_rate": 0.010231852527955256,
+      "sigma_median": 0.4068324147736315,
+      "sigma_p95": 0.7134865087628582,
+      "sources": {
+        "prior_years": 203064,
+        "first_years": 36551,
+        "series_median": 322
+      }
+    },
+    "cell_events": {
+      "rows": 7535,
+      "class_counts": {
+        "censored_by_stockout": 4940,
+        "spike": 1335,
+        "drop": 1005,
+        "new_demand": 148,
+        "suspected_digit_shift": 86,
+        "demand_collapse": 21
+      },
+      "censored_cells": 4948,
+      "censored_units": 99430.0,
+      "collapse_cells": 21,
+      "new_demand_cells": 149,
+      "new_demand_units": 13784.0,
+      "digit_shift_cells": 86,
+      "explained_rows": 5243
+    },
+    "data_errors": {
+      "register_rows": 33,
+      "classes_observed": 17,
+      "hotspots": 15,
+      "rows_covered": 194412
+    },
+    "test_window": {
+      "rows": 58219,
+      "months": 19,
+      "post_eol_rows": 156,
+      "pre_launch_rows": 0,
+      "unseen_pair_rows": 117,
+      "unseen_pairs": 10,
+      "cold_start_skus": [
+        "PMP-020",
+        "PTC-029",
+        "THM-012"
+      ],
+      "unmatched_sku_rows": 0
+    },
+    "register": {
+      "rows": 8210,
+      "by_kind": {
+        "DEMAND_EVENT": 8091,
+        "DATA_ERROR": 119
+      },
+      "by_level": {
+        "cell": 7535,
+        "sku": 610,
+        "company": 36,
+        "dataset": 18,
+        "event": 11
+      },
+      "by_class": {
+        "censored_by_stockout": 4940,
+        "spike": 1337,
+        "drop": 1005,
+        "lifecycle_launch": 601,
+        "new_demand": 148,
+        "suspected_digit_shift": 86,
+        "demand_collapse": 21,
+        "macro_shock": 19,
+        "price_restatement_hotspot": 12,
+        "price_change": 11,
+        "lifecycle_end": 9,
+        "blank_units_hotspot": 3,
+        "blank_units": 1,
+        "date_key_mismatch": 1,
+        "date_keying": 1,
+        "duplicate_load": 1,
+        "event_end_imputed": 1,
+        "event_scope_unresolved": 1,
+        "fill_rate_mismatch": 1,
+        "label_spelling": 1,
+        "macro_gap": 1,
+        "negative_units": 1,
+        "price_missing": 1,
+        "price_off_cycle": 1,
+        "price_region_scatter": 1,
+        "region_unresolved": 1,
+        "revenue_identity_break": 1,
+        "sales_outside_lifecycle": 1,
+        "sku_spelling": 1,
+        "stockout_algebra": 1
+      },
+      "duplicate_cell_classifications": 0,
+      "unexplained_demand_events": 2207
+    }
+  },
+  "verdicts": [
+    {
+      "phase": 2,
+      "check": "anomaly ids unique and ordered",
+      "ok": true,
+      "detail": "8,210 rows"
+    },
+    {
+      "phase": 2,
+      "check": "every anomaly carries evidence and a treatment",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 2,
+      "check": "one primary classification per cell",
+      "ok": true,
+      "detail": "7,535 cell rows"
+    },
+    {
+      "phase": 2,
+      "check": "demand never below observed units",
+      "ok": true,
+      "detail": "max shortfall 0.0"
+    },
+    {
+      "phase": 2,
+      "check": "no usable demand outside lifecycle",
+      "ok": true,
+      "detail": "239,937 usable cells"
+    },
+    {
+      "phase": 2,
+      "check": "suppressed units reconcile to Phase 1",
+      "ok": true,
+      "detail": "99,430"
+    },
+    {
+      "phase": 2,
+      "check": "demand total reconciles to Phase 1",
+      "ok": true,
+      "detail": "12,120,618"
+    },
+    {
+      "phase": 2,
+      "check": "Phase 1 units ledger closes",
+      "ok": true,
+      "detail": "ledger 12,120,618 vs panel 12,120,618"
+    },
+    {
+      "phase": 2,
+      "check": "data errors trace to Phase 1 rules",
+      "ok": true,
+      "detail": "17 rule ids referenced"
+    },
+    {
+      "phase": 2,
+      "check": "cell flag rate is diagnosis-sized",
+      "ok": true,
+      "detail": "1.02% of usable cells (limit 3%)"
+    },
+    {
+      "phase": 2,
+      "check": "baseline covers every usable cell",
+      "ok": true,
+      "detail": "100.00%"
+    },
+    {
+      "phase": 2,
+      "check": "both anomaly kinds are represented",
+      "ok": true,
+      "detail": "119 data errors / 8091 demand events"
+    },
+    {
+      "phase": 2,
+      "check": "register is deterministically ordered",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "ANM-CONTRACT",
+      "issue": "Phase 1 demand tables re-read",
+      "action": "panel, sales and support tables verified",
+      "rows_affected": 243854,
+      "units_affected": null,
+      "detail": "244,566 sales rows, 5,830 stockout rows"
+    },
+    {
+      "rule_id": "ANM-BASELINE",
+      "issue": "expected demand per SKU-Region-month",
+      "action": "median of the same calendar month in the previous three years",
+      "rows_affected": 239937,
+      "units_affected": null,
+      "detail": "coverage 100.00%; fallbacks prior/next/series 203,064/36,551/322; sigma floor 0.03; thresholds |z|>=4.0, |rel|>=0.75, |units|>=50"
+    },
+    {
+      "rule_id": "ANM-MACRO",
+      "issue": "macro indicators move together by >3 robust sigma",
+      "action": "registered as an external explanation, not as a sales anomaly",
+      "rows_affected": 19,
+      "units_affected": null,
+      "detail": "2020-01: Auto_Production_YoY_Pct, Vehicle_Inventory_Days; 2020-02: Auto_Production_YoY_Pct, Vehicle_Inventory_Days; 2020-03: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, New_Vehicle_Orders_Index; 2020-04: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, Vehicle_Inventory_Days, New_Vehicle_Orders_Index, Industrial_Util_Rate_Pct, Fuel_Price_Index; 2020-05: Auto_Production_YoY_Pct, Vehicle_Inventory_Days, New_Vehicle_Orders_Index, Industrial_Util_Rate_Pct; 2020-06: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, New_Vehicle_Orders_Index, Industrial_Util_Rate_Pct; 2020-07: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, New_Vehicle_Orders_Index; 2020-08: Auto_Production_YoY_Pct, New_Vehicle_Orders_Index"
+    },
+    {
+      "rule_id": "ANM-CENSOR",
+      "issue": "stockout censored shipments",
+      "action": "registered as demand event; demand panel already restores requested units",
+      "rows_affected": 4948,
+      "units_affected": 99430.0,
+      "detail": ""
+    },
+    {
+      "rule_id": "ANM-COLLAPSE",
+      "issue": "explicit zero after a running baseline",
+      "action": "registered as a real collapse",
+      "rows_affected": 21,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "ANM-NEW",
+      "issue": "demand in a calendar month with a zero seasonal baseline",
+      "action": "registered as new demand; a percentage move is undefined there",
+      "rows_affected": 149,
+      "units_affected": 13784.0,
+      "detail": ""
+    },
+    {
+      "rule_id": "ANM-DIGIT",
+      "issue": "one-month 10x/100x blip against both neighbours",
+      "action": "flagged as a suspected keying error for review; demand left untouched",
+      "rows_affected": 86,
+      "units_affected": 62043.0,
+      "detail": ""
+    },
+    {
+      "rule_id": "ANM-DERR",
+      "issue": "records wrong on their face, separated from demand",
+      "action": "registered with status repaired/flagged and a Phase 1 rule id",
+      "rows_affected": 194412,
+      "units_affected": null,
+      "detail": "33 register lines"
+    },
+    {
+      "rule_id": "ANM-HOTSPOT",
+      "issue": "defect concentration by month",
+      "action": "registered so a loading incident is not learned as seasonality",
+      "rows_affected": 15,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "ANM-COMPANY",
+      "issue": "company-level deviation from the seasonal baseline",
+      "action": "registered at company scope; macro shocks attached as context",
+      "rows_affected": 2,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "ANM-TEST",
+      "issue": "forecast keys that are post-EOL or cold start",
+      "action": "documented here; Phase 4 decides zero vs floor explicitly",
+      "rows_affected": 156,
+      "units_affected": null,
+      "detail": "10 unseen pairs; cold start PMP-020, PTC-029, THM-012"
+    },
+    {
+      "rule_id": "ANM-REGISTER",
+      "issue": "anomaly register assembled",
+      "action": "one primary class per cell, every line carries evidence and a treatment",
+      "rows_affected": 8210,
+      "units_affected": null,
+      "detail": "119 data errors, 8091 demand events"
+    }
+  ],
+  "outputs": {
+    "anomaly_register": "outputs/anomalies/anomaly_register.parquet",
+    "data_errors": "outputs/anomalies/data_errors.parquet",
+    "demand_events": "outputs/anomalies/demand_events.parquet",
+    "demand_baseline": "outputs/anomalies/demand_baseline.parquet",
+    "monthly_summary": "outputs/anomalies/monthly_summary.parquet",
+    "test_window_profile": "outputs/anomalies/test_window_profile.parquet"
+  }
+}

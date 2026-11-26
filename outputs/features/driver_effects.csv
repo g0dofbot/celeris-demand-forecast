@@ -1,0 +1,129 @@
+driver,scope,metric,estimate,unit,ci_low,ci_high,n_obs,method,note
+seasonality,company,month_01,0.9459081836780654,index_vs_12m_median,0.8783874080589675,1.001143107673435,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_02,0.9063107492180926,index_vs_12m_median,0.8765873342705655,0.9350919347075586,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_03,1.0452362456421622,index_vs_12m_median,1.0033521107127195,1.077792183605324,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_04,1.0578312315687581,index_vs_12m_median,1.0103144813233,1.08036463339258,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_05,1.062060115568237,index_vs_12m_median,1.0471264319931797,1.0890147658158373,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_06,0.987178963222821,index_vs_12m_median,0.9392364322510119,1.0078751535857884,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_07,1.0142177083141717,index_vs_12m_median,0.9862047549012785,1.04265053761434,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_08,0.8984914581203524,index_vs_12m_median,0.8416150153964943,0.9278905305778516,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_09,1.0447941950463515,index_vs_12m_median,1.0314773155235892,1.0603010042853378,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_10,1.0359773226274667,index_vs_12m_median,1.0171447149840125,1.0469794419227259,8,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_11,1.0045541143617716,index_vs_12m_median,0.9959057289067633,1.011678200977664,7,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,month_12,0.9458072731358376,index_vs_12m_median,0.880654942867277,1.0199931579744965,7,ratio_to_centred_12m_median,1.0 = an average month for the company
+seasonality,company,quarter_end_ratio,1.0152273978038422,ratio,,,94,mean(index) quarter-end vs other months,Mar/Jun/Sep/Dec versus the rest
+price_elasticity,company,log_demand_on_log_price,-0.9531632336612245,elasticity,-1.1368967113996977,-0.7694297559227512,204683,within_sku_ols,598 SKUs; month-of-year and linear trend controls; conditional association
+price_elasticity,Advanced Manufacturing,log_demand_on_log_price,0.2448663122633502,elasticity,-0.09669261811615787,0.5864252426428582,58786,within_sku_ols,172 SKUs; month-of-year and linear trend controls; conditional association
+price_elasticity,Electronics & Controls,log_demand_on_log_price,-1.5696418662142984,elasticity,-2.0852861008284655,-1.0539976316001312,27973,within_sku_ols,87 SKUs; month-of-year and linear trend controls; conditional association
+price_elasticity,Fluid Control Group,log_demand_on_log_price,-1.7490275116661695,elasticity,-2.0935865216119844,-1.4044685017203546,58151,within_sku_ols,168 SKUs; month-of-year and linear trend controls; conditional association
+price_elasticity,Power & Drive Systems,log_demand_on_log_price,-0.9288635695548363,elasticity,-1.3940475754008517,-0.4636795637088209,30533,within_sku_ols,87 SKUs; month-of-year and linear trend controls; conditional association
+price_elasticity,Safety & Compliance,log_demand_on_log_price,-1.0212004089887816,elasticity,-1.50312020525069,-0.5392806127268732,29240,within_sku_ols,84 SKUs; month-of-year and linear trend controls; conditional association
+event_lift,Price Change,EV-007,-0.04280741458175508,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2020-01
+event_lift,Holiday,EV-008,-0.3517095784273184,lift_vs_prior_years,,,2,matched_prior_years_same_month,REGION:Asia Pacific; 2020-01
+event_lift,Disruption,EV-009,-0.3186424942620626,lift_vs_prior_years,,,2,matched_prior_years_same_month,REGION:Asia Pacific; 2020-02
+event_lift,Disruption,EV-010,-0.5651860342318441,lift_vs_prior_years,,,3,matched_prior_years_same_month,REGION:Europe; 2020-03
+event_lift,Disruption,EV-011,-0.7404718150986808,lift_vs_prior_years,,,3,matched_prior_years_same_month,REGION:India; 2020-04
+event_lift,Disruption,EV-012,-0.5437143917752062,lift_vs_prior_years,,,3,matched_prior_years_same_month,REGION:Latin America; 2020-04
+event_lift,Disruption,EV-013,-0.5860379197988557,lift_vs_prior_years,,,3,matched_prior_years_same_month,REGION:North America; 2020-04
+event_lift,Holiday,EV-015,-0.37228120145002586,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2020-07
+event_lift,Holiday,EV-016,-0.20861437656581228,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2020-08
+event_lift,Price Change,EV-017,0.17581030284403876,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2021-01
+event_lift,Holiday,EV-018,0.27529827662395046,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Asia Pacific; 2021-02
+event_lift,Supply Constraint,EV-019,0.22289485078336724,lift_vs_prior_years,,,19,matched_prior_years_same_month,PRODUCT_FAMILY:Electrical Assemblies; 2021-03
+event_lift,Holiday,EV-021,0.5253449077662378,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2021-07
+event_lift,Holiday,EV-022,0.35010358094110683,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2021-08
+event_lift,Price Change,EV-023,-0.08282801645868776,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2022-01
+event_lift,Holiday,EV-025,0.05535606356881284,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Asia Pacific; 2022-02
+event_lift,Price Change,EV-027,-0.015737131096262957,lift_vs_prior_years,,,6,matched_prior_years_same_month,GLOBAL:All; 2022-07
+event_lift,Holiday,EV-028,-0.09144904408112364,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2022-07
+event_lift,Holiday,EV-029,-0.10449731811305174,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2022-08
+event_lift,Announcement,EV-030,0.012540610877730174,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2022-11
+event_lift,Price Change,EV-031,-0.11513385813625399,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2023-01
+event_lift,Holiday,EV-032,-0.30894222174788877,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Asia Pacific; 2023-01
+event_lift,System,EV-033,-0.1769643777741453,lift_vs_prior_years,,,3,matched_prior_years_same_month,REGION:Latin America; 2023-03
+event_lift,Holiday,EV-034,1.0500272479564035,lift_vs_prior_years,,,2,matched_prior_years_same_month,REGION:Middle East & Africa; 2023-03
+event_lift,Corporate,EV-035,0.021137202593293436,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Asia Pacific; 2023-07
+event_lift,Holiday,EV-036,0.004319654427645814,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2023-07
+event_lift,Holiday,EV-037,-0.05569500033918995,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2023-08
+event_lift,Price Change,EV-040,0.0785132300465492,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2024-01
+event_lift,Holiday,EV-041,-0.09987160587759747,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Asia Pacific; 2024-02
+event_lift,Holiday,EV-042,0.6480910917615539,lift_vs_prior_years,,,2,matched_prior_years_same_month,REGION:Middle East & Africa; 2024-03
+event_lift,Marketing,EV-043,-0.02747956559113951,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2024-04
+event_lift,Holiday,EV-044,0.001340211155570703,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2024-07
+event_lift,Holiday,EV-045,0.10993561419012732,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2024-08
+event_lift,Price Change,EV-046,0.3052020077302253,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2025-01
+event_lift,Holiday,EV-047,0.0961189498195274,lift_vs_prior_years,,,2,matched_prior_years_same_month,REGION:Asia Pacific; 2025-01
+event_lift,System,EV-048,0.22511847697676624,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2025-02
+event_lift,Holiday,EV-049,0.2639423311090545,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Middle East & Africa; 2025-03
+event_lift,Holiday,EV-050,-0.05891469747594713,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2025-07
+event_lift,Holiday,EV-051,-0.058079398742419186,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2025-08
+event_lift,Price Change,EV-053,-0.08889346332169235,lift_vs_prior_years,,,1,matched_prior_years_same_month,GLOBAL:All; 2026-01
+event_lift,Holiday,EV-054,-0.16676862841062046,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Asia Pacific; 2026-02
+event_lift,Holiday,EV-055,-0.07196440646902325,lift_vs_prior_years,,,2,matched_prior_years_same_month,REGION:Middle East & Africa; 2026-02
+event_lift,Holiday,EV-056,0.09785526742779593,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:North America; 2026-07
+event_lift,Holiday,EV-057,0.006549118387909392,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:Europe; 2026-08
+event_lift,Marketing,EV-058,0.08185213026504035,lift_vs_prior_years,,,1,matched_prior_years_same_month,REGION:India; 2026-09
+event_lift,Announcement,median_lift_by_type,0.012540610877730174,lift,,,1,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,Corporate,median_lift_by_type,0.021137202593293436,lift,,,1,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,Disruption,median_lift_by_type,-0.5651860342318441,lift,,,5,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,Holiday,median_lift_by_type,0.001340211155570703,lift,,,25,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,Marketing,median_lift_by_type,0.027186282336950418,lift,,,2,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,Price Change,median_lift_by_type,-0.029272272839009017,lift,,,8,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,Supply Constraint,median_lift_by_type,0.22289485078336724,lift,,,1,matched_prior_years_same_month,median of per-event lift estimates
+event_lift,System,median_lift_by_type,0.024077049601310463,lift,,,2,matched_prior_years_same_month,median of per-event lift estimates
+macro,company,ISM_Manufacturing_PMI,0.1607309312108755,spearman_rho,,,94,spearman_levels,p=0.122
+macro,company,Auto_Production_YoY_Pct,0.4616929751771729,spearman_rho,,,94,spearman_levels,p=0.000
+macro,company,Vehicle_Inventory_Days,-0.1524611840258038,spearman_rho,,,94,spearman_levels,p=0.142
+macro,company,Raw_Material_Cost_Index,0.24060139519221393,spearman_rho,,,94,spearman_levels,p=0.019
+macro,company,New_Vehicle_Orders_Index,0.445215130673298,spearman_rho,,,94,spearman_levels,p=0.000
+macro,company,Industrial_Util_Rate_Pct,0.40401078248171324,spearman_rho,,,94,spearman_levels,p=0.000
+macro,company,Fuel_Price_Index,0.24452182962245758,spearman_rho,,,94,spearman_levels,p=0.018
+macro,company,EV_Adoption_Index,0.7527689680432422,spearman_rho,,,94,spearman_levels,p=0.000
+lifecycle_ramp,sku,month_0,0.19047619047619047,index_vs_mature_median,,,450,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_1,0.35857142857142854,index_vs_mature_median,,,522,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_2,0.53125,index_vs_mature_median,,,537,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_3,0.6666666666666666,index_vs_mature_median,,,538,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_4,0.7333333333333333,index_vs_mature_median,,,558,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_5,0.8411411411411411,index_vs_mature_median,,,592,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_6,0.9473684210526315,index_vs_mature_median,,,585,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_7,0.967741935483871,index_vs_mature_median,,,599,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_8,1.0789473684210527,index_vs_mature_median,,,635,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_9,1.0555555555555556,index_vs_mature_median,,,602,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_10,1.096774193548387,index_vs_mature_median,,,649,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_11,1.0833333333333333,index_vs_mature_median,,,655,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_12,1.1339712918660287,index_vs_mature_median,,,644,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_13,1.105263157894737,index_vs_mature_median,,,687,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_14,1.1363636363636365,index_vs_mature_median,,,705,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_15,1.1926450742240216,index_vs_mature_median,,,704,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_16,1.1111111111111112,index_vs_mature_median,,,735,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_17,1.1147540983606556,index_vs_mature_median,,,745,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_18,1.1395348837209303,index_vs_mature_median,,,753,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_19,1.1058230683090706,index_vs_mature_median,,,744,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_20,1.1372549019607843,index_vs_mature_median,,,785,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_21,1.100904465799887,index_vs_mature_median,,,768,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_22,1.0981570512820513,index_vs_mature_median,,,830,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_23,1.1639344262295082,index_vs_mature_median,,,819,demand_over_sku_mature_median,1.0 = mature volume
+lifecycle_ramp,sku,month_24,1.1481707317073169,index_vs_mature_median,,,844,demand_over_sku_mature_median,1.0 = mature volume
+channel_mix,company,within_2020,-82377.14175051927,units,,,239792,shift_share,"within-channel growth, 2019->2020"
+channel_mix,company,mix_2020,-2376.8624805495724,units,,,239792,shift_share,"channel-mix shift, 2019->2020"
+channel_mix,company,within_2021,156493.37010058464,units,,,239792,shift_share,"within-channel growth, 2020->2021"
+channel_mix,company,mix_2021,4940.331876413966,units,,,239792,shift_share,"channel-mix shift, 2020->2021"
+channel_mix,company,within_2022,-44341.380195610014,units,,,239792,shift_share,"within-channel growth, 2021->2022"
+channel_mix,company,mix_2022,-18631.408887183352,units,,,239792,shift_share,"channel-mix shift, 2021->2022"
+channel_mix,company,within_2023,18458.404830633484,units,,,239792,shift_share,"within-channel growth, 2022->2023"
+channel_mix,company,mix_2023,752.5800304175082,units,,,239792,shift_share,"channel-mix shift, 2022->2023"
+channel_mix,company,within_2024,63825.97488145293,units,,,239792,shift_share,"within-channel growth, 2023->2024"
+channel_mix,company,mix_2024,-4321.215344268838,units,,,239792,shift_share,"channel-mix shift, 2023->2024"
+channel_mix,company,within_2025,10170.824209148386,units,,,239792,shift_share,"within-channel growth, 2024->2025"
+channel_mix,company,mix_2025,-5262.910456000918,units,,,239792,shift_share,"channel-mix shift, 2024->2025"
+channel_mix,company,within_2026,-101811.1233201379,units,,,239792,shift_share,"within-channel growth, 2025->2026"
+channel_mix,company,mix_2026,3233.5240949532244,units,,,239792,shift_share,"channel-mix shift, 2025->2026"
+screen,full_model,rmse_log,0.8952117685795453,log_rmse,,,35792,ridge_forward_holdout,"fit < 2025-11, scored 2025-11 onward"
+screen,full_model,wape,0.7721424784625872,wape,,,35792,ridge_forward_holdout,aggregate units; dominated by the largest cells
+screen,without_calendar_lifecycle,rmse_log_delta,-0.01597778682182205,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 0.8792 vs 0.8952; WAPE 0.7175
+screen,without_lags,rmse_log_delta,0.539791851082281,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 1.4350 vs 0.8952; WAPE 0.6525
+screen,without_censoring,rmse_log_delta,0.004544516632339679,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 0.8998 vs 0.8952; WAPE 0.7813
+screen,without_price,rmse_log_delta,-0.008397469641906241,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 0.8868 vs 0.8952; WAPE 0.7506
+screen,without_events,rmse_log_delta,0.0021892528048123028,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 0.8974 vs 0.8952; WAPE 0.7656
+screen,without_macro,rmse_log_delta,-0.027720372365059864,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 0.8675 vs 0.8952; WAPE 0.6469
+screen,without_structure,rmse_log_delta,0.004048234286629482,log_rmse_points,,,35792,ridge_forward_holdout_block_ablation,log RMSE 0.8993 vs 0.8952; WAPE 0.7825

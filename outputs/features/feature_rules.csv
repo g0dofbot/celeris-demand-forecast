@@ -1,0 +1,18 @@
+rule_id,issue,action,rows_affected,detail
+FEA-BASE,model rows assembled from the calendar grid and the test keys,"training months plus the 19 forecast months, one row per key",318879,"78,942 rows have no observed demand (absence is not zero)"
+FEA-CALENDAR,"trend, 12-month cycle and quarter-end flags",calendar features are known when the month is planned,318879,quarter-end months carry the reported B2B ordering peak
+FEA-LAGS,demand history features,shifted by at least one month; absence stays NaN,318879,"lag_1..lag_12, rolling mean/median/std/max, zero share, months since last order"
+FEA-CENSOR,stockout history,lagged unserved units and stockout days; current-month censoring excluded,9537,
+FEA-PRICE,annual list price and its year-on-year step,price is known in advance because it steps only on 1 January,318879,coverage 100.00%; 2027-2028 carried from 2026
+FEA-EVENTS,event calendar matched to cell scope,month counts for global / region / family / SKU scope,85065,3 unresolved events and 3 customer/channel event-months cannot be attributed to a SKU-Region cell
+FEA-MACRO,macro indicators joined by month,levels are known when the month is planned,318879,coverage 100.00%; Auto_Production_YoY_Pct converted to a fraction
+FEA-STRUCTURE,customer and channel mix per cell-month,"revenue shares and customer HHI, then lagged before use",239792,
+FEA-ANOMALY,Phase 2 register used as lagged context only,t-1 anomaly class; the current month is never an input,7535,
+FEA-MATRIX,feature matrix assembled,train and forecast rows share one schema,318879,"75 columns, 56 numeric"
+DRV-SEASON,calendar seasonality,month index against a centred 12-month median,94,"peak month 5, trough month 8, quarter-end ratio 1.015"
+DRV-PRICE,within-SKU price elasticity,OLS on log demand with month-of-year and trend controls,204683,"price steps only on 1 January, so the estimate is a year-to-year association"
+DRV-EVENT,event lift against the same month in prior years,matched comparison per resolved event scope,45,8 event types
+DRV-MACRO,macro association with company demand,Spearman rank correlation on monthly levels,8,strongest EV_Adoption_Index rho=+0.753
+DRV-LIFECYCLE,launch ramp,demand relative to the SKU's mature median,16685,
+DRV-MIX,channel mix shift-share,decomposes year-on-year demand into within-channel growth and mix,14,
+DRV-SCREEN,driver block ablation,"ridge fitted before the holdout, scored on the last 12 training months",35792,"full log RMSE 0.8952, WAPE 0.7721 from 2025-11"

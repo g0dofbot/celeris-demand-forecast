@@ -1,0 +1,304 @@
+{
+  "meta": {
+    "phase": 4,
+    "generated_at": "2026-11-25T16:49:07",
+    "runtime_seconds": 115.72,
+    "pandas": "3.0.6",
+    "numpy": "2.5.5",
+    "lightgbm": "4.7.0",
+    "python": "3.14.5",
+    "seed": 20261125
+  },
+  "metrics": {
+    "panel": {
+      "pairs": 3093,
+      "months": 113,
+      "train_months": 94,
+      "horizon_months": 19,
+      "demand_cells": 239937,
+      "design_columns": 42
+    },
+    "backtest": {
+      "origin": "2025-04",
+      "months": 19,
+      "rows": 56613,
+      "scores": [
+        {
+          "model": "blend",
+          "family": "hurdle",
+          "wape": 0.410146907977011,
+          "monthly_wape": 0.06311209738984422,
+          "bias": 0.00187409905418634,
+          "mae": 20.191583065390425,
+          "rmse": 144.39301103431086,
+          "actual_units": 2787065.0,
+          "forecast_units": 2792288.235880456,
+          "rows": 56613,
+          "skill_vs_naive": 0.11647731335691314
+        },
+        {
+          "model": "seasonal_naive",
+          "family": "baseline",
+          "wape": 0.4642177435594208,
+          "monthly_wape": 0.08923191339706286,
+          "bias": 0.04638588185595438,
+          "mae": 22.853496996333654,
+          "rmse": 170.36665651745207,
+          "actual_units": 2787065.0,
+          "forecast_units": 2916345.4678148655,
+          "rows": 56613,
+          "skill_vs_naive": 0.0
+        },
+        {
+          "model": "hurdle_lgbm",
+          "family": "hurdle",
+          "wape": 0.4783929788635575,
+          "monthly_wape": 0.061792931269091675,
+          "bias": -0.034557159413029837,
+          "mae": 23.55134558557859,
+          "rmse": 133.90349728152904,
+          "actual_units": 2787065.0,
+          "forecast_units": 2690751.950500524,
+          "rows": 56613,
+          "skill_vs_naive": -0.030535746426767707
+        },
+        {
+          "model": "moving_average",
+          "family": "baseline",
+          "wape": 0.693602631115757,
+          "monthly_wape": 0.1420392335434183,
+          "bias": 0.12945678233106417,
+          "mae": 34.14614341389146,
+          "rmse": 202.03199424034318,
+          "actual_units": 2787065.0,
+          "forecast_units": 3147869.4670475274,
+          "rows": 56613,
+          "skill_vs_naive": -0.4941320980053716
+        },
+        {
+          "model": "hurdle_ridge",
+          "family": "hurdle",
+          "wape": 0.7723541014738451,
+          "monthly_wape": 0.2597564561004997,
+          "bias": 0.2013146970806785,
+          "mae": 38.02308805087527,
+          "rmse": 159.447805669535,
+          "actual_units": 2787065.0,
+          "forecast_units": 3348142.1462191613,
+          "rows": 56613,
+          "skill_vs_naive": -0.6637754850811346
+        }
+      ],
+      "selected": "blend",
+      "bias_tolerance": 0.15,
+      "blend_weight": 0.6,
+      "blend_weight_curve": [
+        {
+          "weight": 0.0,
+          "wape": 0.4667100442870502,
+          "bias": -0.20220065400897724
+        },
+        {
+          "weight": 0.1,
+          "wape": 0.45221840379707107,
+          "bias": -0.19121797759033976
+        },
+        {
+          "weight": 0.2,
+          "wape": 0.44032732887689313,
+          "bias": -0.18240222538786055
+        },
+        {
+          "weight": 0.3,
+          "wape": 0.4309019348794088,
+          "bias": -0.17391209468217272
+        },
+        {
+          "weight": 0.4,
+          "wape": 0.4239420839290028,
+          "bias": -0.16568721933494612
+        },
+        {
+          "weight": 0.5,
+          "wape": 0.41976370693177134,
+          "bias": -0.1568401113589073
+        },
+        {
+          "weight": 0.6,
+          "wape": 0.41860901850541354,
+          "bias": -0.1473357895705616
+        },
+        {
+          "weight": 0.7,
+          "wape": 0.4210954751460009,
+          "bias": -0.1374037104801571
+        },
+        {
+          "weight": 0.8,
+          "wape": 0.42778287494582384,
+          "bias": -0.12688436437751638
+        },
+        {
+          "weight": 0.9,
+          "wape": 0.43924885123162677,
+          "bias": -0.11536787254544878
+        },
+        {
+          "weight": 1.0,
+          "wape": 0.45610733340429693,
+          "bias": -0.10303332915417573
+        }
+      ],
+      "blend_weight_inner_origin": "2023-09"
+    },
+    "uncertainty": {
+      "sigma_log": 0.8040513798804001,
+      "monthly_ratio_p10": 0.8867142045629158,
+      "monthly_ratio_p90": 1.096764109483059
+    }
+  },
+  "verdicts": [
+    {
+      "phase": 4,
+      "check": "submission keys equal the test keys",
+      "ok": true,
+      "detail": "58,219 rows vs 58,219"
+    },
+    {
+      "phase": 4,
+      "check": "submission columns match the sample format",
+      "ok": true,
+      "detail": "Date, SKU_ID, Region, Units_Sold_Forecast"
+    },
+    {
+      "phase": 4,
+      "check": "submission is non-negative whole units",
+      "ok": true,
+      "detail": "2,719,010 units total"
+    },
+    {
+      "phase": 4,
+      "check": "post-EOL keys are forecast at exactly zero",
+      "ok": true,
+      "detail": "156 keys"
+    },
+    {
+      "phase": 4,
+      "check": "every test key has a forecast",
+      "ok": true,
+      "detail": "58,219 rows"
+    },
+    {
+      "phase": 4,
+      "check": "backtest fits strictly before the scored months",
+      "ok": true,
+      "detail": "fit < 2025-04"
+    },
+    {
+      "phase": 4,
+      "check": "backtest scores the full 19-month horizon",
+      "ok": true,
+      "detail": "19 months, 56,613 rows"
+    },
+    {
+      "phase": 4,
+      "check": "recursive lags reproduce Phase 3 on training months",
+      "ok": true,
+      "detail": "min agreement 1.00000 across 14 columns"
+    },
+    {
+      "phase": 4,
+      "check": "horizon month 1 lag_1 is the last observed demand",
+      "ok": true,
+      "detail": "3,002 keys with history"
+    },
+    {
+      "phase": 4,
+      "check": "only known-at-t columns are taken from the feature table",
+      "ok": true,
+      "detail": "24 known columns, 0 lagged, 0 target"
+    },
+    {
+      "phase": 4,
+      "check": "model selection follows the backtest rule",
+      "ok": true,
+      "detail": "selected blend by WAPE with |bias| <= 15%"
+    },
+    {
+      "phase": 4,
+      "check": "blend weight is chosen outside the scored months",
+      "ok": true,
+      "detail": "w=0.6 chosen on 2023-09 -> 2025-03"
+    },
+    {
+      "phase": 4,
+      "check": "forecast path is reproducible",
+      "ok": true,
+      "detail": "identical predictions on a second pass"
+    },
+    {
+      "phase": 4,
+      "check": "uncertainty bands are ordered and non-negative",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 4,
+      "check": "submission grain is unique",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 4,
+      "check": "forecast level is plausible against the trailing year",
+      "ok": true,
+      "detail": "143,106/month vs trailing 132,046/month"
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "FC-PANEL",
+      "issue": "demand history rebuilt on a pairs x months grid",
+      "action": "lags are recomputed from this grid, never read from the feature table",
+      "rows_affected": 318879,
+      "detail": "239,937 observed/demand cells, NaN elsewhere (absence is not zero)"
+    },
+    {
+      "rule_id": "FC-BLEND",
+      "issue": "blend weight is a free parameter",
+      "action": "selected on an inner 19-month window inside the fit period; the outer holdout only sees the resulting fixed weight",
+      "rows_affected": 55247,
+      "detail": "w=0.6 chosen at 2023-09; holdout never used"
+    },
+    {
+      "rule_id": "FC-BACKTEST",
+      "issue": "candidates scored forward in time at the true horizon",
+      "action": "fit strictly before 2025-04, then 19 recursive months",
+      "rows_affected": 56613,
+      "detail": "selected blend; naive WAPE 0.4642"
+    },
+    {
+      "rule_id": "FC-POST-EOL",
+      "issue": "test keys after the SKU's EOL month",
+      "action": "forecast exactly zero - the ERP records no sales after EOL",
+      "rows_affected": 156,
+      "detail": "not a clip: the Phase 1 ledger shows 0 post-EOL sales rows"
+    },
+    {
+      "rule_id": "FC-UNCERTAINTY",
+      "issue": "multiplicative error band on the cell forecast",
+      "action": "prediction x exp(+/- 1.28 x sigma), sigma from holdout log ratios",
+      "rows_affected": 58219,
+      "detail": "sigma 0.804; aggregate band from monthly holdout ratios p10 0.89 / p90 1.10"
+    }
+  ],
+  "outputs": {
+    "submission": "outputs/submission.csv",
+    "forecast_cell_month": "outputs/forecast/forecast_cell_month.parquet",
+    "forecast_monthly_summary": "outputs/forecast/forecast_monthly_summary.parquet",
+    "backtest_scores": "outputs/forecast/backtest_scores.csv",
+    "backtest_cell_month": "outputs/forecast/backtest_cell_month.parquet",
+    "backtest_monthly": "outputs/forecast/backtest_monthly.parquet",
+    "model_diagnostics": "outputs/forecast/model_diagnostics.json"
+  }
+}

@@ -1,0 +1,556 @@
+{
+  "meta": {
+    "phase": 1,
+    "generated_at": "2026-11-25T16:46:11",
+    "runtime_seconds": 37.25,
+    "pandas": "3.0.6",
+    "numpy": "2.5.5",
+    "python": "3.14.5"
+  },
+  "metrics": {
+    "_data_dir": "D:\\001 Study\\001 Coding\\007 Hackathonsss\\student_data",
+    "_inputs": {
+      "train.csv": 248248,
+      "test.csv": 58219,
+      "macro_indicators.csv": 114,
+      "sku_master.csv": 601,
+      "events_calendar.csv": 68,
+      "inventory_stockouts.csv": 5830,
+      "sample_submission.csv": 5
+    },
+    "master": {
+      "rows": 601,
+      "with_eol": 9,
+      "replacements": 9
+    },
+    "price": {
+      "sku_months_split_before": 1485,
+      "sku_months_split_after": 0,
+      "max_ratio_before": 112.36,
+      "max_ratio_after": 1.0,
+      "rows_price_repaired": 55234,
+      "rows_price_filled": 36352,
+      "sku_years": 4784
+    },
+    "revenue": {
+      "identity_failures_recorded_price": 1610,
+      "restated_at_canonical_price": 19290,
+      "recorded_total": 8684426206.34,
+      "recomputed_total": 8830425767.445
+    },
+    "train": {
+      "raw_rows": 248248,
+      "rows_after_dedupe": 244566,
+      "rows_dropped": 3682,
+      "units_raw": 12217326.0,
+      "units_dropped": 187073.0,
+      "usable_rows": 239792,
+      "sku_variants_repaired": 2942,
+      "labels_repaired": 11371,
+      "units_missing": 3544,
+      "units_negative": 491,
+      "units_clean": 12056692.0,
+      "units_raw_nonneg": 12244478.0,
+      "units_duplicates_nonneg": 187786.0,
+      "units_sku_unmatched_nonneg": 0.0,
+      "rows_sku_unmatched": 0,
+      "ledger": [
+        {
+          "step": "blank units (unknown, not zero)",
+          "rule_id": "TRN-UNITS-BLANK",
+          "basis": "row retained; carries no demand",
+          "rows": 3544,
+          "units": 0.0
+        },
+        {
+          "step": "negative units (returns/adjustments)",
+          "rule_id": "TRN-UNITS-NEG",
+          "basis": "row retained and flagged; contributes no demand",
+          "rows": 491,
+          "units": 0.0
+        },
+        {
+          "step": "unparseable dates",
+          "rule_id": "TRN-DATE-BAD",
+          "basis": "row retained; cannot be placed in a month",
+          "rows": 0,
+          "units": 0.0
+        },
+        {
+          "step": "pre-launch months",
+          "rule_id": "TRN-LIFECYCLE",
+          "basis": "Month < Launch_Month",
+          "rows": 15,
+          "units": 397.0
+        },
+        {
+          "step": "post-EOL months",
+          "rule_id": "TRN-LIFECYCLE",
+          "basis": "Month > EOL_Month",
+          "rows": 0,
+          "units": 0.0
+        },
+        {
+          "step": "Region = Unknown",
+          "rule_id": "TRN-REGION",
+          "basis": "region blank or unresolvable",
+          "rows": 724,
+          "units": 35107.0
+        }
+      ],
+      "usable_units": 12021188.0,
+      "pre_launch_rows": 16,
+      "post_eol_rows": 0,
+      "region_unknown_rows": 737
+    },
+    "test": {
+      "rows": 58219,
+      "months": 19,
+      "after_eol": 156,
+      "before_launch": 0,
+      "unseen_pairs": 117,
+      "cold_start_skus": [
+        "PMP-020",
+        "PTC-029",
+        "THM-012"
+      ]
+    },
+    "stockouts": {
+      "rows": 5830,
+      "requested_units": 235319.0,
+      "shipped_units": 140554.0,
+      "unserved_units": 95150.0,
+      "algebra_gap_rows": 315,
+      "fill_mismatch_rows": 3889
+    },
+    "macro": {
+      "months": 113,
+      "duplicate_months": [
+        "2022-06"
+      ],
+      "interpolated_cells": 5,
+      "unit_note": "Auto_Production_YoY_Pct is percentage points, not a fraction"
+    },
+    "events": {
+      "rows": 68,
+      "unresolved": [
+        "EV-038",
+        "EV-052",
+        "EV-062"
+      ],
+      "price_events": 11
+    },
+    "demand": {
+      "panel_cells": 243854,
+      "observed_cells": 243813,
+      "stockout_cells": 5830,
+      "zero_cells": 35273,
+      "suppressed_units": 99430.0,
+      "demand_units": 12120618.0,
+      "observed_units": 12021188.0,
+      "grid_cells": 289802,
+      "grid_status": {
+        "positive": 204519,
+        "zero": 35273,
+        "pre_launch": 28088,
+        "absent": 20723,
+        "post_eol": 1054,
+        "suppressed_only": 145
+      }
+    },
+    "reconciliation": {
+      "raw_rows": 248248,
+      "duplicate_rows": 3682,
+      "unmatched_sku_rows": 0,
+      "clean_rows": 244566,
+      "usable_rows": 239792,
+      "panel_cells": 243854,
+      "raw_units": 12217326.0,
+      "raw_units_nonneg": 12244478.0,
+      "units_duplicates": 187786.0,
+      "units_dropped_duplicates": 187786.0,
+      "units_sku_unmatched": 0.0,
+      "units_negative": -26439.0,
+      "units_clean": 12056692.0,
+      "units_clean_ledger": 12056692.0,
+      "exclusions": {
+        "blank units (unknown, not zero)": {
+          "rule_id": "TRN-UNITS-BLANK",
+          "rows": 3544,
+          "units": 0.0
+        },
+        "negative units (returns/adjustments)": {
+          "rule_id": "TRN-UNITS-NEG",
+          "rows": 491,
+          "units": 0.0
+        },
+        "unparseable dates": {
+          "rule_id": "TRN-DATE-BAD",
+          "rows": 0,
+          "units": 0.0
+        },
+        "pre-launch months": {
+          "rule_id": "TRN-LIFECYCLE",
+          "rows": 15,
+          "units": 397.0
+        },
+        "post-EOL months": {
+          "rule_id": "TRN-LIFECYCLE",
+          "rows": 0,
+          "units": 0.0
+        },
+        "Region = Unknown": {
+          "rule_id": "TRN-REGION",
+          "rows": 724,
+          "units": 35107.0
+        }
+      },
+      "units_usable": 12021188.0,
+      "units_usable_ledger": 12021188.0,
+      "units_suppressed": 99430.0,
+      "demand_units": 12120618.0,
+      "units_demand_ledger": 12120618.0,
+      "closes": true
+    }
+  },
+  "verdicts": [
+    {
+      "phase": 1,
+      "check": "Record_ID unique",
+      "ok": true,
+      "detail": "244,566 rows"
+    },
+    {
+      "phase": 1,
+      "check": "all SKUs resolve to master",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 1,
+      "check": "one base price per SKU-year",
+      "ok": true,
+      "detail": "max distinct prices 1"
+    },
+    {
+      "phase": 1,
+      "check": "demand panel grain unique",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 1,
+      "check": "no absent calendar cell carries demand",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 1,
+      "check": "no usable demand after EOL",
+      "ok": true,
+      "detail": "0 train rows violate EOL; 1,054 calendar cells are post-EOL and left absent"
+    },
+    {
+      "phase": 1,
+      "check": "units ledger reaches sales_clean",
+      "ok": true,
+      "detail": "12,056,692 vs 12,056,692"
+    },
+    {
+      "phase": 1,
+      "check": "units ledger reaches the demand panel",
+      "ok": true,
+      "detail": "usable 12,021,188 -> demand 12,120,618 (closes: True)"
+    },
+    {
+      "phase": 1,
+      "check": "every excluded unit is itemised",
+      "ok": true,
+      "detail": "6 buckets, 35,504 units: blank units (unknown, not zero), negative units (returns/adjustments), unparseable dates, pre-launch months, post-EOL months, Region = Unknown"
+    },
+    {
+      "phase": 1,
+      "check": "train rows reconcile",
+      "ok": true,
+      "detail": "248,248 - 3,682 = 244,566"
+    },
+    {
+      "phase": 1,
+      "check": "test rows unchanged",
+      "ok": true,
+      "detail": "58,219"
+    },
+    {
+      "phase": 1,
+      "check": "macro months unique and continuous",
+      "ok": true,
+      "detail": "113 months"
+    },
+    {
+      "phase": 1,
+      "check": "every rule is logged",
+      "ok": true,
+      "detail": "31 rules"
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "MST-KEY",
+      "issue": "duplicate SKU_ID in master",
+      "action": "kept first occurrence",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "MST-LAUNCH",
+      "issue": "missing Launch_Date",
+      "action": "kept; lifecycle lower bound unknown",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "MST-EOL",
+      "issue": "EOL_Date precedes Launch_Date",
+      "action": "EOL ignored for lifecycle",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-DATE-2062",
+      "issue": "date year outside the observed horizon (keying error)",
+      "action": "re-dated from Year/Month; row retained",
+      "rows_affected": 30,
+      "units_affected": null,
+      "detail": "plausible horizon year 2026; the Year column supplied the repair"
+    },
+    {
+      "rule_id": "TRN-DATE-BAD",
+      "issue": "Date unparseable",
+      "action": "kept but excluded from demand",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-DATE-KEY",
+      "issue": "Year/Month disagree with Date",
+      "action": "Date wins; Year/Month recomputed from Date",
+      "rows_affected": 246,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-DUP-ID",
+      "issue": "duplicate Record_ID (double load)",
+      "action": "kept latest Load_Timestamp",
+      "rows_affected": 3682,
+      "units_affected": null,
+      "detail": "2,950 of 3,682 dropped rows were identical payloads; the rest conflicted and resolved by newest load"
+    },
+    {
+      "rule_id": "TRN-SKU-KEY",
+      "issue": "SKU spelling variant / unpadded numeric suffix",
+      "action": "mapped to canonical master key",
+      "rows_affected": 2942,
+      "units_affected": null,
+      "detail": "BSS10 -> BSS010 and equivalent case/punctuation variants"
+    },
+    {
+      "rule_id": "TRN-SKU-MISS",
+      "issue": "SKU absent from master",
+      "action": "flagged and excluded from demand",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-LABEL",
+      "issue": "label spelling variants (customer / region / channel)",
+      "action": "mapped to canonical label",
+      "rows_affected": 11371,
+      "units_affected": null,
+      "detail": "12 customers, 7 regions, 4 channels retained"
+    },
+    {
+      "rule_id": "TRN-UNITS-BLANK",
+      "issue": "Units_Sold blank in an existing row",
+      "action": "treated as unknown, never as zero",
+      "rows_affected": 3544,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-UNITS-NEG",
+      "issue": "Units_Sold negative",
+      "action": "excluded from demand (returns/adjustment)",
+      "rows_affected": 491,
+      "units_affected": -26439.0,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-LIFECYCLE",
+      "issue": "sales outside Launch_Date..EOL_Date",
+      "action": "flagged and excluded from training demand",
+      "rows_affected": 16,
+      "units_affected": 397.0,
+      "detail": "16 before launch, 0 after EOL"
+    },
+    {
+      "rule_id": "TRN-PRICE",
+      "issue": "unit price not constant across SKU-month regions",
+      "action": "single SKU-year base price applied",
+      "rows_affected": 55234,
+      "units_affected": null,
+      "detail": "price differed by region in 1,485 SKU-months before and 0 after; max within-SKU-month ratio 112.36 -> 1"
+    },
+    {
+      "rule_id": "TRN-PRICE-FILL",
+      "issue": "unit price zero / missing",
+      "action": "filled from the SKU-year ladder",
+      "rows_affected": 36352,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-REVENUE",
+      "issue": "Units * recorded Price != Revenue",
+      "action": "recorded revenue and price kept; recomputed revenue added; row flagged",
+      "rows_affected": 1610,
+      "units_affected": null,
+      "detail": "recorded total 8,684,426,206.34, recomputed total 8,830,425,767.445"
+    },
+    {
+      "rule_id": "TRN-REGION",
+      "issue": "Region blank / unresolvable",
+      "action": "kept as Region=Unknown, excluded from demand",
+      "rows_affected": 737,
+      "units_affected": 35107.0,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-GRAIN-DUP",
+      "issue": "Date+SKU+Region repeated",
+      "action": "retained: rows split by customer/channel (legitimate)",
+      "rows_affected": 3,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TRN-LEDGER",
+      "issue": "units outside the demand panel",
+      "action": "itemised by mutually exclusive bucket, never left implicit",
+      "rows_affected": 4774,
+      "units_affected": 35504.0,
+      "detail": "blank units (unknown, not zero): 3,544 rows / 0 units; negative units (returns/adjustments): 491 rows / 0 units; unparseable dates: 0 rows / 0 units; pre-launch months: 15 rows / 397 units; post-EOL months: 0 rows / 0 units; Region = Unknown: 724 rows / 35,107 units"
+    },
+    {
+      "rule_id": "TST-LIFECYCLE",
+      "issue": "forecast keys outside Launch_Date..EOL_Date",
+      "action": "flagged for Phase 4 (zero vs floor is an explicit modelling choice)",
+      "rows_affected": 156,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TST-PAIR",
+      "issue": "SKU-Region pair unseen in training",
+      "action": "flagged as cold start",
+      "rows_affected": 117,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "TST-DUP",
+      "issue": "duplicate Date+SKU+Region in test",
+      "action": "none",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "STK-ALGEBRA",
+      "issue": "Requested != Shipped + Lost + Backordered",
+      "action": "kept; recomputed fill rate is authoritative",
+      "rows_affected": 315,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "STK-FILL",
+      "issue": "Fill_Rate_Pct inconsistent with Shipped/Requested",
+      "action": "recomputed from units",
+      "rows_affected": 3889,
+      "units_affected": null,
+      "detail": "max reported-vs-recomputed gap 131.2pp"
+    },
+    {
+      "rule_id": "STK-OVER",
+      "issue": "Shipped or Lost exceeds Requested",
+      "action": "kept and flagged",
+      "rows_affected": 51,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "STK-DUP",
+      "issue": "duplicate Date+SKU+Region in stockout log",
+      "action": "none",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "MAC-DUP",
+      "issue": "duplicate month in macro series",
+      "action": "numeric duplicates averaged",
+      "rows_affected": 2,
+      "units_affected": null,
+      "detail": "months 2022-06"
+    },
+    {
+      "rule_id": "MAC-GAP",
+      "issue": "blank macro observations",
+      "action": "linearly interpolated within the series",
+      "rows_affected": 5,
+      "units_affected": null,
+      "detail": "Vehicle_Inventory_Days: 2019-07; New_Vehicle_Orders_Index: 2023-08; Industrial_Util_Rate_Pct: 2021-02; Fuel_Price_Index: 2020-09; EV_Adoption_Index: 2024-11"
+    },
+    {
+      "rule_id": "EVT-END",
+      "issue": "End_Date blank",
+      "action": "set to Start_Date",
+      "rows_affected": 1,
+      "units_affected": null,
+      "detail": ""
+    },
+    {
+      "rule_id": "EVT-SCOPE",
+      "issue": "event scope does not resolve to a known entity",
+      "action": "flagged; not applied",
+      "rows_affected": 3,
+      "units_affected": null,
+      "detail": "EV-038, EV-052, EV-062"
+    },
+    {
+      "rule_id": "DEM-GRAIN",
+      "issue": "duplicate demand panel grain",
+      "action": "none",
+      "rows_affected": 0,
+      "units_affected": null,
+      "detail": ""
+    }
+  ],
+  "outputs": {
+    "sales_clean": "outputs/clean/sales_clean.parquet",
+    "sku_master_clean": "outputs/clean/sku_master_clean.parquet",
+    "demand_monthly": "outputs/clean/demand_monthly.parquet",
+    "demand_grid": "outputs/clean/demand_grid.parquet",
+    "stockouts_clean": "outputs/clean/stockouts_clean.parquet",
+    "macro_clean": "outputs/clean/macro_clean.parquet",
+    "events_clean": "outputs/clean/events_clean.parquet",
+    "test_clean": "outputs/clean/test_clean.parquet"
+  }
+}

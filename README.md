@@ -77,6 +77,20 @@ The dashboard reads exclusively from `outputs/`; it never touches `student_data/
 and never re-runs the pipeline, so re-run the phase that produces a table before
 expecting it to change.
 
+### Hosted on Streamlit Community Cloud
+
+Vercel cannot host this app: it runs Python only as framework-preset functions
+(FastAPI/Flask/Django, 300 s cap), and `streamlit run` starts its own server that
+Vercel has no way to launch. Community Cloud runs the server as-is.
+
+The 25 files the dashboard declares (`REQUIRED` + `OPTIONAL` in
+`src/dashboard_launch.py`, ~13 MB) are committed even though `outputs/` is
+git-ignored, so a Cloud build has data without running the pipeline first.
+
+* Repository `g0dofbot/celeris-demand-forecast`, branch `main`
+* Entrypoint `src/dashboard_launch.py`
+* Advanced settings → Python **3.14** (the version the pins were verified on)
+
 ## 5. What to look at first
 
 1. `outputs/profile_report.txt` — the raw-data defects, in the order a judge
@@ -108,7 +122,7 @@ and invariants; they skip cleanly when `outputs/` has not been generated yet.
 run_pipeline.py     phase runner (re-execs into .venv, isolates subprocesses)
 src/                one module per phase
 tests/              per-phase contract tests
-outputs/            generated artifacts (git-ignored)
+outputs/            generated artifacts (git-ignored, except the 25 the dashboard reads)
 student_data/       input CSVs (git-ignored)
 logs/               run logs (git-ignored)
 ```

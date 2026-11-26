@@ -1,0 +1,14 @@
+seq,step,rule_id,basis,rows,units,note,units_running
+1,raw train rows (non-negative units),,train.csv as loaded,248248.0,12244478.0,"gross signed total 12,217,326 incl. -26,439 returns",12244478.0
+2,duplicate Record_ID removed (double load),TRN-DUP-ID,newest Load_Timestamp kept,-3682.0,-187786.0,,12056692.0
+3,unmatched SKU rows removed,TRN-SKU-MISS,SKU absent from the product master,0.0,0.0,,12056692.0
+4,sales_clean units,,subtotal,244566.0,,"12,056,692 non-negative units booked",12056692.0
+5,"blank units (unknown, not zero)",TRN-UNITS-BLANK,row retained; carries no demand,-3544.0,0.0,,12056692.0
+6,negative units (returns/adjustments),TRN-UNITS-NEG,row retained and flagged; contributes no demand,-491.0,0.0,,12056692.0
+7,unparseable dates,TRN-DATE-BAD,row retained; cannot be placed in a month,0.0,0.0,,12056692.0
+8,pre-launch months,TRN-LIFECYCLE,Month < Launch_Month,-15.0,-397.0,,12056295.0
+9,post-EOL months,TRN-LIFECYCLE,Month > EOL_Month,0.0,0.0,,12056295.0
+10,Region = Unknown,TRN-REGION,region blank or unresolvable,-724.0,-35107.0,,12021188.0
+11,usable training units,,"subtotal: in lifecycle, known region, valid units",239792.0,,"12,021,188 units enter the demand panel",12021188.0
+12,stockout demand recovered,DEM-SUPPRESSED,requested units where a logged shortfall exists,,99430.0,added,12120618.0
+13,unconstrained demand,,subtotal: demand_monthly.parquet,243854.0,,"12,120,618 units",12120618.0

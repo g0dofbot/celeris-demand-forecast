@@ -1,0 +1,32 @@
+rule_id,issue,action,rows_affected,units_affected,detail
+MST-KEY,duplicate SKU_ID in master,kept first occurrence,0,,
+MST-LAUNCH,missing Launch_Date,kept; lifecycle lower bound unknown,0,,
+MST-EOL,EOL_Date precedes Launch_Date,EOL ignored for lifecycle,0,,
+TRN-DATE-2062,date year outside the observed horizon (keying error),re-dated from Year/Month; row retained,30,,plausible horizon year 2026; the Year column supplied the repair
+TRN-DATE-BAD,Date unparseable,kept but excluded from demand,0,,
+TRN-DATE-KEY,Year/Month disagree with Date,Date wins; Year/Month recomputed from Date,246,,
+TRN-DUP-ID,duplicate Record_ID (double load),kept latest Load_Timestamp,3682,,"2,950 of 3,682 dropped rows were identical payloads; the rest conflicted and resolved by newest load"
+TRN-SKU-KEY,SKU spelling variant / unpadded numeric suffix,mapped to canonical master key,2942,,BSS10 -> BSS010 and equivalent case/punctuation variants
+TRN-SKU-MISS,SKU absent from master,flagged and excluded from demand,0,,
+TRN-LABEL,label spelling variants (customer / region / channel),mapped to canonical label,11371,,"12 customers, 7 regions, 4 channels retained"
+TRN-UNITS-BLANK,Units_Sold blank in an existing row,"treated as unknown, never as zero",3544,,
+TRN-UNITS-NEG,Units_Sold negative,excluded from demand (returns/adjustment),491,-26439.0,
+TRN-LIFECYCLE,sales outside Launch_Date..EOL_Date,flagged and excluded from training demand,16,397.0,"16 before launch, 0 after EOL"
+TRN-PRICE,unit price not constant across SKU-month regions,single SKU-year base price applied,55234,,"price differed by region in 1,485 SKU-months before and 0 after; max within-SKU-month ratio 112.36 -> 1"
+TRN-PRICE-FILL,unit price zero / missing,filled from the SKU-year ladder,36352,,
+TRN-REVENUE,Units * recorded Price != Revenue,recorded revenue and price kept; recomputed revenue added; row flagged,1610,,"recorded total 8,684,426,206.34, recomputed total 8,830,425,767.445"
+TRN-REGION,Region blank / unresolvable,"kept as Region=Unknown, excluded from demand",737,35107.0,
+TRN-GRAIN-DUP,Date+SKU+Region repeated,retained: rows split by customer/channel (legitimate),3,,
+TRN-LEDGER,units outside the demand panel,"itemised by mutually exclusive bucket, never left implicit",4774,35504.0,"blank units (unknown, not zero): 3,544 rows / 0 units; negative units (returns/adjustments): 491 rows / 0 units; unparseable dates: 0 rows / 0 units; pre-launch months: 15 rows / 397 units; post-EOL months: 0 rows / 0 units; Region = Unknown: 724 rows / 35,107 units"
+TST-LIFECYCLE,forecast keys outside Launch_Date..EOL_Date,flagged for Phase 4 (zero vs floor is an explicit modelling choice),156,,
+TST-PAIR,SKU-Region pair unseen in training,flagged as cold start,117,,
+TST-DUP,duplicate Date+SKU+Region in test,none,0,,
+STK-ALGEBRA,Requested != Shipped + Lost + Backordered,kept; recomputed fill rate is authoritative,315,,
+STK-FILL,Fill_Rate_Pct inconsistent with Shipped/Requested,recomputed from units,3889,,max reported-vs-recomputed gap 131.2pp
+STK-OVER,Shipped or Lost exceeds Requested,kept and flagged,51,,
+STK-DUP,duplicate Date+SKU+Region in stockout log,none,0,,
+MAC-DUP,duplicate month in macro series,numeric duplicates averaged,2,,months 2022-06
+MAC-GAP,blank macro observations,linearly interpolated within the series,5,,Vehicle_Inventory_Days: 2019-07; New_Vehicle_Orders_Index: 2023-08; Industrial_Util_Rate_Pct: 2021-02; Fuel_Price_Index: 2020-09; EV_Adoption_Index: 2024-11
+EVT-END,End_Date blank,set to Start_Date,1,,
+EVT-SCOPE,event scope does not resolve to a known entity,flagged; not applied,3,,"EV-038, EV-052, EV-062"
+DEM-GRAIN,duplicate demand panel grain,none,0,,

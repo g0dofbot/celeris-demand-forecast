@@ -1,0 +1,13 @@
+rule_id,issue,action,rows_affected,units_affected,detail
+ANM-CONTRACT,Phase 1 demand tables re-read,"panel, sales and support tables verified",243854,,"244,566 sales rows, 5,830 stockout rows"
+ANM-BASELINE,expected demand per SKU-Region-month,median of the same calendar month in the previous three years,239937,,"coverage 100.00%; fallbacks prior/next/series 203,064/36,551/322; sigma floor 0.03; thresholds |z|>=4.0, |rel|>=0.75, |units|>=50"
+ANM-MACRO,macro indicators move together by >3 robust sigma,"registered as an external explanation, not as a sales anomaly",19,,"2020-01: Auto_Production_YoY_Pct, Vehicle_Inventory_Days; 2020-02: Auto_Production_YoY_Pct, Vehicle_Inventory_Days; 2020-03: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, New_Vehicle_Orders_Index; 2020-04: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, Vehicle_Inventory_Days, New_Vehicle_Orders_Index, Industrial_Util_Rate_Pct, Fuel_Price_Index; 2020-05: Auto_Production_YoY_Pct, Vehicle_Inventory_Days, New_Vehicle_Orders_Index, Industrial_Util_Rate_Pct; 2020-06: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, New_Vehicle_Orders_Index, Industrial_Util_Rate_Pct; 2020-07: ISM_Manufacturing_PMI, Auto_Production_YoY_Pct, New_Vehicle_Orders_Index; 2020-08: Auto_Production_YoY_Pct, New_Vehicle_Orders_Index"
+ANM-CENSOR,stockout censored shipments,registered as demand event; demand panel already restores requested units,4948,99430.0,
+ANM-COLLAPSE,explicit zero after a running baseline,registered as a real collapse,21,,
+ANM-NEW,demand in a calendar month with a zero seasonal baseline,registered as new demand; a percentage move is undefined there,149,13784.0,
+ANM-DIGIT,one-month 10x/100x blip against both neighbours,flagged as a suspected keying error for review; demand left untouched,86,62043.0,
+ANM-DERR,"records wrong on their face, separated from demand",registered with status repaired/flagged and a Phase 1 rule id,194412,,33 register lines
+ANM-HOTSPOT,defect concentration by month,registered so a loading incident is not learned as seasonality,15,,
+ANM-COMPANY,company-level deviation from the seasonal baseline,registered at company scope; macro shocks attached as context,2,,
+ANM-TEST,forecast keys that are post-EOL or cold start,documented here; Phase 4 decides zero vs floor explicitly,156,,"10 unseen pairs; cold start PMP-020, PTC-029, THM-012"
+ANM-REGISTER,anomaly register assembled,"one primary class per cell, every line carries evidence and a treatment",8210,,"119 data errors, 8091 demand events"

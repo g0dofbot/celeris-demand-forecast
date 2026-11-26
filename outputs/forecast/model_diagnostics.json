@@ -1,0 +1,323 @@
+{
+  "seed": 20261125,
+  "ridge_lambda": 3.0,
+  "lightgbm": {
+    "n_estimators": 260,
+    "learning_rate": 0.06,
+    "num_leaves": 31,
+    "min_child_samples": 40,
+    "subsample": 0.9,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "max_bin": 127,
+    "n_jobs": 4,
+    "random_state": 20261125,
+    "deterministic": true,
+    "force_row_wise": true,
+    "verbose": -1
+  },
+  "selected": "blend",
+  "blend_weight": 0.6,
+  "blend_weight_curve": [
+    {
+      "weight": 0.0,
+      "wape": 0.4667100442870502,
+      "bias": -0.20220065400897724
+    },
+    {
+      "weight": 0.1,
+      "wape": 0.45221840379707107,
+      "bias": -0.19121797759033976
+    },
+    {
+      "weight": 0.2,
+      "wape": 0.44032732887689313,
+      "bias": -0.18240222538786055
+    },
+    {
+      "weight": 0.3,
+      "wape": 0.4309019348794088,
+      "bias": -0.17391209468217272
+    },
+    {
+      "weight": 0.4,
+      "wape": 0.4239420839290028,
+      "bias": -0.16568721933494612
+    },
+    {
+      "weight": 0.5,
+      "wape": 0.41976370693177134,
+      "bias": -0.1568401113589073
+    },
+    {
+      "weight": 0.6,
+      "wape": 0.41860901850541354,
+      "bias": -0.1473357895705616
+    },
+    {
+      "weight": 0.7,
+      "wape": 0.4210954751460009,
+      "bias": -0.1374037104801571
+    },
+    {
+      "weight": 0.8,
+      "wape": 0.42778287494582384,
+      "bias": -0.12688436437751638
+    },
+    {
+      "weight": 0.9,
+      "wape": 0.43924885123162677,
+      "bias": -0.11536787254544878
+    },
+    {
+      "weight": 1.0,
+      "wape": 0.45610733340429693,
+      "bias": -0.10303332915417573
+    }
+  ],
+  "blend_weight_selected_on": "2023-09",
+  "holdout_origin": "2025-04",
+  "features": {
+    "known": [
+      "t_index",
+      "month_sin",
+      "month_cos",
+      "is_quarter_end",
+      "is_year_end",
+      "months_since_launch",
+      "months_to_eol",
+      "is_launch_window",
+      "is_eol_window",
+      "log_price",
+      "price_change_yoy",
+      "months_since_year_start",
+      "is_price_step_month",
+      "event_count",
+      "event_price_count",
+      "event_supply_count",
+      "ISM_Manufacturing_PMI",
+      "Auto_Production_YoY_Pct",
+      "Vehicle_Inventory_Days",
+      "Raw_Material_Cost_Index",
+      "New_Vehicle_Orders_Index",
+      "Industrial_Util_Rate_Pct",
+      "Fuel_Price_Index",
+      "EV_Adoption_Index"
+    ],
+    "recursive": [
+      "lag_1",
+      "lag_2",
+      "lag_3",
+      "lag_6",
+      "lag_12",
+      "mean_3",
+      "mean_6",
+      "mean_12",
+      "median_3",
+      "std_6",
+      "max_12",
+      "zero_share_6",
+      "months_since_last_order",
+      "yoy_ratio",
+      "cell_mean"
+    ],
+    "categorical": [
+      "Product_Family",
+      "Business_Unit",
+      "Region"
+    ]
+  },
+  "lag_parity": {
+    "lag_1": 1.0,
+    "lag_2": 1.0,
+    "lag_3": 1.0,
+    "lag_6": 1.0,
+    "lag_12": 1.0,
+    "mean_3": 1.0,
+    "mean_6": 1.0,
+    "mean_12": 1.0,
+    "median_3": 1.0,
+    "std_6": 1.0,
+    "max_12": 1.0,
+    "zero_share_6": 1.0,
+    "months_since_last_order": 1.0,
+    "yoy_ratio": 1.0
+  },
+  "scores": [
+    {
+      "model": "blend",
+      "family": "hurdle",
+      "wape": 0.410146907977011,
+      "monthly_wape": 0.06311209738984422,
+      "bias": 0.00187409905418634,
+      "mae": 20.191583065390425,
+      "rmse": 144.39301103431086,
+      "actual_units": 2787065.0,
+      "forecast_units": 2792288.235880456,
+      "rows": 56613,
+      "skill_vs_naive": 0.11647731335691314
+    },
+    {
+      "model": "seasonal_naive",
+      "family": "baseline",
+      "wape": 0.4642177435594208,
+      "monthly_wape": 0.08923191339706286,
+      "bias": 0.04638588185595438,
+      "mae": 22.853496996333654,
+      "rmse": 170.36665651745207,
+      "actual_units": 2787065.0,
+      "forecast_units": 2916345.4678148655,
+      "rows": 56613,
+      "skill_vs_naive": 0.0
+    },
+    {
+      "model": "hurdle_lgbm",
+      "family": "hurdle",
+      "wape": 0.4783929788635575,
+      "monthly_wape": 0.061792931269091675,
+      "bias": -0.034557159413029837,
+      "mae": 23.55134558557859,
+      "rmse": 133.90349728152904,
+      "actual_units": 2787065.0,
+      "forecast_units": 2690751.950500524,
+      "rows": 56613,
+      "skill_vs_naive": -0.030535746426767707
+    },
+    {
+      "model": "moving_average",
+      "family": "baseline",
+      "wape": 0.693602631115757,
+      "monthly_wape": 0.1420392335434183,
+      "bias": 0.12945678233106417,
+      "mae": 34.14614341389146,
+      "rmse": 202.03199424034318,
+      "actual_units": 2787065.0,
+      "forecast_units": 3147869.4670475274,
+      "rows": 56613,
+      "skill_vs_naive": -0.4941320980053716
+    },
+    {
+      "model": "hurdle_ridge",
+      "family": "hurdle",
+      "wape": 0.7723541014738451,
+      "monthly_wape": 0.2597564561004997,
+      "bias": 0.2013146970806785,
+      "mae": 38.02308805087527,
+      "rmse": 159.447805669535,
+      "actual_units": 2787065.0,
+      "forecast_units": 3348142.1462191613,
+      "rows": 56613,
+      "skill_vs_naive": -0.6637754850811346
+    }
+  ],
+  "uncertainty": {
+    "sigma_log": 0.8040513798804001,
+    "low": 0.8867142045629158,
+    "high": 1.096764109483059
+  },
+  "post_eol_keys": 156,
+  "fit_rows_final": 260660,
+  "importances": [
+    {
+      "feature": "mean_6",
+      "gain": 224933.9169703722
+    },
+    {
+      "feature": "cell_mean",
+      "gain": 203169.16362565756
+    },
+    {
+      "feature": "lag_1",
+      "gain": 59358.00769126415
+    },
+    {
+      "feature": "max_12",
+      "gain": 49174.267828285694
+    },
+    {
+      "feature": "mean_3",
+      "gain": 35101.18768501282
+    },
+    {
+      "feature": "lag_6",
+      "gain": 33902.80536007881
+    },
+    {
+      "feature": "median_3",
+      "gain": 28773.113531053066
+    },
+    {
+      "feature": "lag_12",
+      "gain": 27580.98576849699
+    },
+    {
+      "feature": "std_6",
+      "gain": 19102.799782037735
+    },
+    {
+      "feature": "Auto_Production_YoY_Pct",
+      "gain": 18529.736647188663
+    },
+    {
+      "feature": "months_since_last_order",
+      "gain": 17559.59240078926
+    },
+    {
+      "feature": "t_index",
+      "gain": 15199.69910788536
+    },
+    {
+      "feature": "zero_share_6",
+      "gain": 5936.544659376144
+    },
+    {
+      "feature": "ISM_Manufacturing_PMI",
+      "gain": 5015.961464643478
+    },
+    {
+      "feature": "months_since_launch",
+      "gain": 4913.99580591917
+    },
+    {
+      "feature": "event_supply_count",
+      "gain": 4741.326882839203
+    },
+    {
+      "feature": "event_count",
+      "gain": 4685.292733848095
+    },
+    {
+      "feature": "lag_2",
+      "gain": 4636.150180757046
+    },
+    {
+      "feature": "New_Vehicle_Orders_Index",
+      "gain": 4232.024975657463
+    },
+    {
+      "feature": "lag_3",
+      "gain": 4216.542988359928
+    },
+    {
+      "feature": "Region=India",
+      "gain": 4195.548991799355
+    },
+    {
+      "feature": "Industrial_Util_Rate_Pct",
+      "gain": 4051.7461066246033
+    },
+    {
+      "feature": "Raw_Material_Cost_Index",
+      "gain": 3374.0547312498093
+    },
+    {
+      "feature": "mean_12",
+      "gain": 3009.080529510975
+    },
+    {
+      "feature": "month_sin",
+      "gain": 2726.181245982647
+    }
+  ]
+}

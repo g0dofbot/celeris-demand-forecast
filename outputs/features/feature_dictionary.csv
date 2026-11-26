@@ -1,0 +1,76 @@
+column,definition,source,leakage_class,dtype,non_null
+SKU_ID,key/categorical column (canonical SKU identifier); not a model input,keys,key,str,318879
+Region,key/categorical column (canonical region); not a model input,keys,key,str,318879
+Month,key/categorical column (month-start timestamp of the row); not a model input,keys,key,datetime64[us],318879
+Year,key/categorical column (calendar year of the month); not a model input,keys,key,int64,318879
+Month_Num,key/categorical column (calendar month 1-12); not a model input,keys,key,int32,318879
+Product_Family,key/categorical column (product family from the SKU master); not a model input,keys,key,str,318879
+Business_Unit,key/categorical column (business unit from the SKU master); not a model input,keys,key,str,318879
+split,key/categorical column (train or forecast); not a model input,keys,key,str,318879
+horizon_index,"key/categorical column (1-19 inside the forecast window, 0 for training months); not a model input",keys,key,int64,318879
+grid_status,key/categorical column (Phase 1 cell status: positive/zero/absent/suppressed_only/forecast/post_eol); not a model input,keys,key,str,318879
+lifecycle_ok,month is inside Launch_Date..EOL_Date,sku_master,structural,bool,318879
+pre_launch,month precedes Launch_Date,sku_master,structural,bool,318879
+post_eol,month follows EOL_Date,sku_master,structural,bool,318879
+cell_absent,cell has no ERP row this month; absence is not a zero,demand_grid,target,bool,318879
+target_demand,unconstrained demand for the month (NaN outside training),demand_monthly,target,float64,239937
+target_observed,observed units for the month (NaN when the cell has no row),demand_monthly,target,float64,239792
+target_is_zero,"True when the month is an explicit zero order, not a missing row",demand_grid,target,bool,318879
+target_missing,True when the cell has no row and no stockout record,demand_grid,target,bool,318879
+t_index,months since 2019-01; linear trend,calendar,known_at_t,int64,318879
+month_sin,"sine of the calendar month, 12-month cycle",calendar,known_at_t,float64,318879
+month_cos,"cosine of the calendar month, 12-month cycle",calendar,known_at_t,float64,318879
+is_quarter_end,"month is March, June, September or December",calendar,known_at_t,bool,318879
+is_year_end,month is December,calendar,known_at_t,bool,318879
+months_since_launch,"months since Launch_Month, clipped at 0",sku_master,known_at_t,float64,318879
+months_to_eol,months until EOL_Month (NaN when no EOL),sku_master,known_at_t,float64,3330
+is_launch_window,within three months of launch,sku_master,known_at_t,bool,318879
+is_eol_window,within three months before EOL,sku_master,known_at_t,bool,318879
+lag_1,demand at t-1 (NaN when absent),demand_monthly,lagged,float64,239912
+lag_2,demand at t-2 (NaN when absent),demand_monthly,lagged,float64,239888
+lag_3,demand at t-3 (NaN when absent),demand_monthly,lagged,float64,239863
+lag_6,demand at t-6 (NaN when absent),demand_monthly,lagged,float64,239788
+lag_12,demand at t-12 (NaN when absent),demand_monthly,lagged,float64,239641
+lag_1_present,1 when the cell has an ERP row at t-1,demand_grid,lagged,int64,318879
+months_since_last_order,months since the last month with demand > 0 (prior months only),demand_monthly,lagged,float64,299784
+mean_3,mean demand over t-1..t-3,demand_monthly,lagged,float64,244515
+mean_6,mean demand over t-1..t-6,demand_monthly,lagged,float64,248104
+mean_12,mean demand over t-1..t-12,demand_monthly,lagged,float64,247606
+median_3,median demand over t-1..t-3 (robust to one lumpy order),demand_monthly,lagged,float64,244515
+std_6,standard deviation of demand over t-1..t-6,demand_monthly,lagged,float64,248104
+zero_share_6,share of t-1..t-6 with an explicit zero,demand_monthly,lagged,float64,254401
+max_12,largest demand in t-1..t-12 (order-size memory),demand_monthly,lagged,float64,247606
+yoy_ratio,(lag_12+1)/(lag_24+1): last year versus the year before,demand_monthly,lagged,float64,169842
+suppressed_lag_1,unserved units at t-1 (0 where no stockout was logged),demand_monthly,lagged,float64,318879
+suppressed_3m_sum,unserved units over t-1..t-3,demand_monthly,lagged,float64,318879
+stockout_days_lag_1,stockout days at t-1,demand_monthly,lagged,float64,318879
+stockout_days_3m_sum,stockout days over t-1..t-3,demand_monthly,lagged,float64,318879
+price,canonical annual list price for the SKU-year,sales_clean,known_at_t,float64,318879
+log_price,natural log of price,sales_clean,known_at_t,float64,318879
+price_change_yoy,price versus the previous year's price,sales_clean,known_at_t,float64,270768
+months_since_year_start,month-of-year - 1; price steps only on 1 January,calendar,known_at_t,int32,318879
+is_price_step_month,January month in which the price differs from the prior year,sales_clean,known_at_t,bool,318879
+price_imputed_future,1 when 2027/2028 price is carried from 2026 (no future list given),sales_clean,known_at_t,int64,318879
+event_count,market events active this month that match the cell scope,events_clean,known_at_t,int64,318879
+event_price_count,price-type events active this month,events_clean,known_at_t,int64,318879
+event_supply_count,supply/disruption/logistics events active this month,events_clean,known_at_t,int64,318879
+has_event,1 when any matched event is active,events_clean,known_at_t,int64,318879
+ISM_Manufacturing_PMI,macro indicator ISM_Manufacturing_PMI for the month,macro_clean,known_at_t,float64,318879
+Auto_Production_YoY_Pct,macro indicator Auto_Production_YoY_Pct for the month,macro_clean,known_at_t,float64,318879
+Vehicle_Inventory_Days,macro indicator Vehicle_Inventory_Days for the month,macro_clean,known_at_t,float64,318879
+Raw_Material_Cost_Index,macro indicator Raw_Material_Cost_Index for the month,macro_clean,known_at_t,float64,318879
+New_Vehicle_Orders_Index,macro indicator New_Vehicle_Orders_Index for the month,macro_clean,known_at_t,float64,318879
+Industrial_Util_Rate_Pct,macro indicator Industrial_Util_Rate_Pct for the month,macro_clean,known_at_t,float64,318879
+Fuel_Price_Index,macro indicator Fuel_Price_Index for the month,macro_clean,known_at_t,float64,318879
+EV_Adoption_Index,macro indicator EV_Adoption_Index for the month,macro_clean,known_at_t,float64,318879
+Auto_Production_YoY_Frac,auto production YoY as a fraction (source is percentage points),macro_clean,known_at_t,float64,318879
+customers_lag_1,distinct customers ordering at t-1,sales_clean,lagged,float64,239767
+channels_lag_1,distinct channels ordering at t-1,sales_clean,lagged,float64,239767
+direct_oem_share_3m,Direct OEM revenue share over t-1..t-3,sales_clean,lagged,float64,251352
+export_share_3m,Export revenue share over t-1..t-3,sales_clean,lagged,float64,251352
+aftermarket_share_3m,Aftermarket revenue share over t-1..t-3,sales_clean,lagged,float64,251352
+hhi_customer_3m,customer revenue concentration (HHI) over t-1..t-3,sales_clean,lagged,float64,251352
+prev_anomaly_class,Phase 2 primary anomaly class at t-1,anomalies,lagged,str,318879
+prev_drop,a drop was registered at t-1,anomalies,lagged,int64,318879
+prev_spike,a spike was registered at t-1,anomalies,lagged,int64,318879
+prev_censored,a stockout censored t-1,anomalies,lagged,int64,318879

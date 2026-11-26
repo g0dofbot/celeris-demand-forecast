@@ -1,0 +1,256 @@
+{
+  "meta": {
+    "phase": 3,
+    "generated_at": "2026-11-25T16:47:08",
+    "runtime_seconds": 36.13,
+    "pandas": "3.0.6",
+    "numpy": "2.5.5",
+    "scipy": "1.18.1",
+    "python": "3.14.5"
+  },
+  "metrics": {
+    "base": {
+      "rows": 318879,
+      "train_rows": 260660,
+      "forecast_rows": 58219,
+      "pairs": 3093,
+      "forecast_months": 19,
+      "target_missing_rows": 78942
+    },
+    "matrix": {
+      "rows": 318879,
+      "columns": 75,
+      "numeric_columns": 56
+    },
+    "screen": {
+      "cutoff": "2025-11",
+      "fit_rows": 204145,
+      "holdout_rows": 35792,
+      "log_rmse_full": 0.8952117685795453,
+      "wape_full": 0.7721424784625872,
+      "log_rmse_without": {
+        "without_calendar_lifecycle": -0.01597778682182205,
+        "without_lags": 0.539791851082281,
+        "without_censoring": 0.004544516632339679,
+        "without_price": -0.008397469641906241,
+        "without_events": 0.0021892528048123028,
+        "without_macro": -0.027720372365059864,
+        "without_structure": 0.004048234286629482
+      }
+    }
+  },
+  "verdicts": [
+    {
+      "phase": 3,
+      "check": "feature grain is unique",
+      "ok": true,
+      "detail": "318,879 rows"
+    },
+    {
+      "phase": 3,
+      "check": "train rows equal lifecycle-valid grid cells",
+      "ok": true,
+      "detail": "260,660 rows"
+    },
+    {
+      "phase": 3,
+      "check": "forecast rows equal the test keys",
+      "ok": true,
+      "detail": "58,219 vs 58,219"
+    },
+    {
+      "phase": 3,
+      "check": "forecast rows carry no target",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 3,
+      "check": "lag_1 is strictly the prior month",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 3,
+      "check": "lag_12 is strictly twelve months back",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 3,
+      "check": "no pre-launch or post-EOL row in training",
+      "ok": true,
+      "detail": "0 pre-launch, 0 post-EOL"
+    },
+    {
+      "phase": 3,
+      "check": "price available for every row",
+      "ok": true,
+      "detail": "52,103 future rows carry 2026"
+    },
+    {
+      "phase": 3,
+      "check": "macro available for every row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "phase": 3,
+      "check": "every column is in the dictionary with a leakage class",
+      "ok": true,
+      "detail": "75 columns documented; 65 are model inputs"
+    },
+    {
+      "phase": 3,
+      "check": "every driver block has a screen result",
+      "ok": true,
+      "detail": "8 screen rows"
+    },
+    {
+      "phase": 3,
+      "check": "screen holdout is after the fit window",
+      "ok": true,
+      "detail": "cutoff 2025-11"
+    },
+    {
+      "phase": 3,
+      "check": "driver effects cover the main blocks",
+      "ok": true,
+      "detail": "7 driver families"
+    },
+    {
+      "phase": 3,
+      "check": "feature table is deterministically ordered",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "FEA-BASE",
+      "issue": "model rows assembled from the calendar grid and the test keys",
+      "action": "training months plus the 19 forecast months, one row per key",
+      "rows_affected": 318879,
+      "detail": "78,942 rows have no observed demand (absence is not zero)"
+    },
+    {
+      "rule_id": "FEA-CALENDAR",
+      "issue": "trend, 12-month cycle and quarter-end flags",
+      "action": "calendar features are known when the month is planned",
+      "rows_affected": 318879,
+      "detail": "quarter-end months carry the reported B2B ordering peak"
+    },
+    {
+      "rule_id": "FEA-LAGS",
+      "issue": "demand history features",
+      "action": "shifted by at least one month; absence stays NaN",
+      "rows_affected": 318879,
+      "detail": "lag_1..lag_12, rolling mean/median/std/max, zero share, months since last order"
+    },
+    {
+      "rule_id": "FEA-CENSOR",
+      "issue": "stockout history",
+      "action": "lagged unserved units and stockout days; current-month censoring excluded",
+      "rows_affected": 9537,
+      "detail": ""
+    },
+    {
+      "rule_id": "FEA-PRICE",
+      "issue": "annual list price and its year-on-year step",
+      "action": "price is known in advance because it steps only on 1 January",
+      "rows_affected": 318879,
+      "detail": "coverage 100.00%; 2027-2028 carried from 2026"
+    },
+    {
+      "rule_id": "FEA-EVENTS",
+      "issue": "event calendar matched to cell scope",
+      "action": "month counts for global / region / family / SKU scope",
+      "rows_affected": 85065,
+      "detail": "3 unresolved events and 3 customer/channel event-months cannot be attributed to a SKU-Region cell"
+    },
+    {
+      "rule_id": "FEA-MACRO",
+      "issue": "macro indicators joined by month",
+      "action": "levels are known when the month is planned",
+      "rows_affected": 318879,
+      "detail": "coverage 100.00%; Auto_Production_YoY_Pct converted to a fraction"
+    },
+    {
+      "rule_id": "FEA-STRUCTURE",
+      "issue": "customer and channel mix per cell-month",
+      "action": "revenue shares and customer HHI, then lagged before use",
+      "rows_affected": 239792,
+      "detail": ""
+    },
+    {
+      "rule_id": "FEA-ANOMALY",
+      "issue": "Phase 2 register used as lagged context only",
+      "action": "t-1 anomaly class; the current month is never an input",
+      "rows_affected": 7535,
+      "detail": ""
+    },
+    {
+      "rule_id": "FEA-MATRIX",
+      "issue": "feature matrix assembled",
+      "action": "train and forecast rows share one schema",
+      "rows_affected": 318879,
+      "detail": "75 columns, 56 numeric"
+    },
+    {
+      "rule_id": "DRV-SEASON",
+      "issue": "calendar seasonality",
+      "action": "month index against a centred 12-month median",
+      "rows_affected": 94,
+      "detail": "peak month 5, trough month 8, quarter-end ratio 1.015"
+    },
+    {
+      "rule_id": "DRV-PRICE",
+      "issue": "within-SKU price elasticity",
+      "action": "OLS on log demand with month-of-year and trend controls",
+      "rows_affected": 204683,
+      "detail": "price steps only on 1 January, so the estimate is a year-to-year association"
+    },
+    {
+      "rule_id": "DRV-EVENT",
+      "issue": "event lift against the same month in prior years",
+      "action": "matched comparison per resolved event scope",
+      "rows_affected": 45,
+      "detail": "8 event types"
+    },
+    {
+      "rule_id": "DRV-MACRO",
+      "issue": "macro association with company demand",
+      "action": "Spearman rank correlation on monthly levels",
+      "rows_affected": 8,
+      "detail": "strongest EV_Adoption_Index rho=+0.753"
+    },
+    {
+      "rule_id": "DRV-LIFECYCLE",
+      "issue": "launch ramp",
+      "action": "demand relative to the SKU's mature median",
+      "rows_affected": 16685,
+      "detail": ""
+    },
+    {
+      "rule_id": "DRV-MIX",
+      "issue": "channel mix shift-share",
+      "action": "decomposes year-on-year demand into within-channel growth and mix",
+      "rows_affected": 14,
+      "detail": ""
+    },
+    {
+      "rule_id": "DRV-SCREEN",
+      "issue": "driver block ablation",
+      "action": "ridge fitted before the holdout, scored on the last 12 training months",
+      "rows_affected": 35792,
+      "detail": "full log RMSE 0.8952, WAPE 0.7721 from 2025-11"
+    }
+  ],
+  "outputs": {
+    "features_monthly": "outputs/features/features_monthly.parquet",
+    "feature_dictionary": "outputs/features/feature_dictionary.csv",
+    "driver_effects": "outputs/features/driver_effects.csv",
+    "driver_screen_coefficients": "outputs/features/driver_screen_coefficients.csv",
+    "driver_panel_monthly": "outputs/features/driver_panel_monthly.parquet"
+  }
+}
