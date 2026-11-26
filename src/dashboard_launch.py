@@ -15,6 +15,7 @@ Check the outputs headlessly (what ``python run_pipeline.py --phase 5`` does):
 
 Pages
 -----
+Core (the default view)
 Overview        demand and revenue outlook, family / region / channel mix
 Demand explorer family -> SKU -> region -> customer drill-down, flagged events
 Forecast       monthly and SKU-level forecast with filters and a CSV download
@@ -22,6 +23,13 @@ Validation     the forward-in-time backtest: candidates, monthly fit, by slice
 Anomalies      the Phase 2 register, filterable, with the monthly flag rate
 Data quality   the Phase 1 units ledger, cleaning log and price repairs
 Assumptions    every rule the pipeline applied, in one place
+
+Advanced (behind the sidebar tier toggle)
+Macro lead/lag  correlation of demand against each macro driver by lag
+Procurement    the buy requirement implied by the P90 forecast
+
+The Advanced views are secondary analysis, so they stay out of the navigation
+unless the planner asks for them; the Core seven are always the landing view.
 
 Shared filters
 --------------
@@ -85,13 +93,30 @@ PAGE_TITLES = {
     "Anomalies": "Anomaly register",
     "Data quality": "Data quality and reconciliation",
     "Assumptions": "Assumptions and limitations",
+    "Macro lead/lag": "Macro lead/lag analysis",
+    "Procurement plan": "Procurement plan at P90",
 }
-PAGES = list(PAGE_TITLES)
+CORE_PAGES = list(PAGE_TITLES)[:7]
+ADVANCED_PAGES = list(PAGE_TITLES)[7:]
+PAGES = CORE_PAGES + ADVANCED_PAGES
 TABLE_SUFFIXES = {".parquet", ".csv"}
 FILTER_KEYS = {"family": "flt_family", "sku": "flt_sku", "region": "flt_region",
                "channel": "flt_channel", "customer": "flt_customer"}
 HISTORY_COLUMNS = ("Product_Family", "SKU_ID", "Region", "Sales_Channel", "Customer_Name")
 CELL_COLUMNS = ("SKU_ID", "Region")
+LEAD_LAGS = tuple(range(-6, 7))
+# company-level macro series of the Phase 3 panel, with the labels the view uses
+MACRO_DRIVERS = {
+    "price_index": "Vehicle price index",
+    "ISM_Manufacturing_PMI": "Manufacturing PMI",
+    "Auto_Production_YoY_Pct": "Auto production YoY",
+    "Vehicle_Inventory_Days": "Vehicle inventory days",
+    "Raw_Material_Cost_Index": "Raw material cost index",
+    "New_Vehicle_Orders_Index": "New vehicle orders index",
+    "Industrial_Util_Rate_Pct": "Industrial utilisation",
+    "Fuel_Price_Index": "Fuel price index",
+    "EV_Adoption_Index": "EV adoption index",
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -357,6 +382,10 @@ def main(argv: list[str] | None = None) -> int:
             {"product_family", "region", "horizon_months"} <= set(slices["dimension"])
             and bool(slices["wape"].notna().all()),
             f"{len(slices)} slice rows across {slices['dimension'].nunique()} dimensions")
+    verdict("the P90 forecast supports the procurement view",
+            bool(cells["forecast_p90"].notna().all()) and float(cells["forecast_p90"].sum()) > 0,
+            f"{cells['forecast_p90'].sum():,.0f} P90 units over "
+            f"{cells['Month'].nunique()} months")
 
     lines.append("")
     lines.append(f"  elapsed seconds                                 {time.time() - started:,.1f}")
@@ -425,6 +454,13 @@ def _select(label: str, options: list, key: str):
     if st.session_state.get(key) not in options:
         st.session_state[key] = options[0]
     return st.selectbox(label, options, key=key)
+
+
+def _nav(label: str, options: list, key: str):
+    """Sidebar navigation that returns to the first view when the tier changes."""
+    if st.session_state.get(key) not in options:
+        st.session_state[key] = options[0]
+    return st.sidebar.radio(label, options, key=key)
 
 
 def shared_filters(frames: dict) -> dict:
@@ -998,6 +1034,130 @@ def page_anomalies(frames: dict, filters: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# page: macro lead/lag (advanced)
+# --------------------------------------------------------------------------- #
+def lead_lag_matrix(panel: pd.DataFrame, lags: tuple[int, ...] = LEAD_LAGS) -> pd.DataFrame:
+    """Correlate 12-month demand change with each driver's change at every lag.
+
+    Differencing both sides removes the shared trend, which would otherwise make
+    every level correlation look strong.  A positive lag means the driver moved
+    first, so the column is read as "how many months ahead does this driver run".
+    """
+    frame = panel.set_index(month_axis(panel)).sort_index()
+    demand = frame["demand_units"].pct_change(12)
+    rows = {}
+    for column, label in MACRO_DRIVERS.items():
+        if column not in frame:
+            continue
+        change = frame[column].diff(12)
+        if change.notna().sum() < 24:  # too short a history to correlate
+            continue
+        rows[label] = {lag: demand.corr(change.shift(lag)) for lag in lags}
+    return pd.DataFrame(rows).T
+
+
+def page_lead_lag(frames: dict, filters: dict) -> None:
+    panel = frames.get("driver_panel")
+    st.markdown("### Which macro drivers run ahead of demand")
+    if panel is None or len(panel) < 36:
+        st.info("This view needs `features/driver_panel_monthly.parquet` from Phase 3. "
+                "Run the pipeline to write it.")
+        return
+
+    matrix = lead_lag_matrix(panel)
+    if matrix.empty:
+        st.info("The macro panel carries no series long enough to correlate.")
+        return
+
+    figure = px.imshow(matrix, aspect="auto", text_auto=".2f", zmin=-1, zmax=1,
+                       color_continuous_scale="RdBu_r", origin="upper",
+                       labels=dict(x="driver lead in months (+ = driver leads)",
+                                   y="", color="correlation"))
+    figure.update_layout(title="Correlation of 12-month demand change with each driver",
+                         height=420, margin=dict(l=10, r=10, t=60, b=10))
+    st.plotly_chart(figure, width="stretch")
+    st.caption("Company-level Phase 3 panel, so the SKU / region filters do not narrow it. "
+               "Both sides are 12-month changes, which keeps the shared trend from driving the "
+               "correlation; read each row for its strongest positive lag.")
+
+    picks = matrix.abs().idxmax(axis=1)
+    summary = pd.DataFrame({"Driver": matrix.index,
+                            "Leading lag (months)": picks.to_numpy(),
+                            "Correlation": [matrix.loc[driver, lag]
+                                            for driver, lag in zip(matrix.index, picks)]})
+    summary = summary.reindex(
+        summary["Correlation"].abs().sort_values(ascending=False).index).reset_index(drop=True)
+    summary["Correlation"] = summary["Correlation"].round(2)
+    st.markdown("**Strongest lead per driver**")
+    st.dataframe(summary, width="stretch", hide_index=True)
+
+
+# --------------------------------------------------------------------------- #
+# page: procurement (advanced)
+# --------------------------------------------------------------------------- #
+def page_procurement(frames: dict, filters: dict) -> None:
+    cells = apply_cell_filters(frames["forecast_cells"], filters)
+    cells = cells.loc[~cells["post_eol"].astype(bool)]
+
+    st.markdown("### What to commit, at P90")
+    st.caption("P90 is the 9-in-10 demand outcome for each SKU x region and month. Buying to "
+               "P90 trades working capital for availability; the point forecast is the "
+               "expected outcome.")
+    if cells.empty:
+        st.info("No forecast cells match the shared filters.")
+        return
+
+    months = month_axis(cells)
+    first = months.min()
+    coverage = st.slider("Coverage window: months of demand to commit now", 1, 12, 3,
+                         help="The delivered data carries no on-hand stock or supplier lead "
+                              "time, so the window is the planner's assumption, not a "
+                              "pipeline number.")
+    window = cells.loc[months < first + pd.DateOffset(months=coverage)]
+
+    plan = (window.groupby(["SKU_ID", "Product_Family", "Region"], as_index=False)
+            .agg(p90_units=("forecast_p90", "sum"),
+                 point_units=("forecast_units", "sum"),
+                 price=("list_price", "first")))
+    plan["p90_value"] = plan["p90_units"] * plan["price"]
+    plan = plan.sort_values("p90_value", ascending=False).reset_index(drop=True)
+    cover = plan["p90_units"].sum() / plan["point_units"].sum() - 1
+
+    kpi_row([
+        ("Commit now (P90 units)", f"{plan['p90_units'].sum():,.0f}", None),
+        ("Commit now (list value)", f"${plan['p90_value'].sum() / 1e6:,.2f}M", None),
+        ("SKU x region lines", f"{len(plan):,}", f"over {coverage} months"),
+        ("Cover above the point forecast", f"{cover:+.0%}", None),
+    ])
+
+    schedule = (cells.assign(Month=months).groupby("Month", as_index=False)
+                .agg(p90=("forecast_p90", "sum"), point=("forecast_units", "sum")))
+    figure = go.Figure()
+    figure.add_trace(go.Bar(x=schedule["Month"], y=schedule["p90"], name="P90 demand",
+                            marker_color="#1f4e79"))
+    figure.add_trace(go.Scatter(x=schedule["Month"], y=schedule["point"],
+                                name="point forecast", mode="lines+markers",
+                                line=dict(color="#d67828", width=2)))
+    figure.update_layout(title="Monthly buy requirement", height=380, hovermode="x unified",
+                         legend=dict(orientation="h", y=1.02, x=0),
+                         margin=dict(l=10, r=10, t=70, b=10), yaxis_title="units")
+    st.plotly_chart(figure, width="stretch")
+
+    st.markdown(f"**Top purchase lines in the {coverage}-month window**")
+    table = plan.head(25).copy()
+    table["p90_value"] = table["p90_value"].round(0)
+    table["p90_units"] = table["p90_units"].round(0)
+    table["point_units"] = table["point_units"].round(0)
+    table["price"] = table["price"].round(2)
+    table.columns = ["SKU", "Family", "Region", "P90 units", "Point units", "List price",
+                     "Commit value USD"]
+    st.dataframe(table, width="stretch", hide_index=True)
+    frame_download(plan, "celeris_procurement_plan.csv", "Download the full plan")
+    st.caption("P90 is summed per SKU and region: a planning quantity, not a guaranteed "
+               "outcome. Post-EOL cells, which the forecast pins at zero by rule, are excluded.")
+
+
+# --------------------------------------------------------------------------- #
 # page: data quality
 # --------------------------------------------------------------------------- #
 def page_quality(frames: dict) -> None:
@@ -1109,7 +1269,11 @@ def render() -> None:
     ok, rows, missing = check_presence(out_dir)
 
     st.sidebar.title("Celeris control tower")
-    page = st.sidebar.radio("View", PAGES)
+    advanced = st.sidebar.toggle(
+        "Advanced views", value=False,
+        help="Adds the macro lead/lag analysis and the P90 procurement plan. "
+             "The Core views stay the default.")
+    page = _nav("View", PAGES if advanced else CORE_PAGES, "view")
     st.sidebar.caption(f"Source: `{out_dir}`")
     latest = max((record["modified"] for record in rows), default=0.0)
     st.sidebar.caption("Latest output: "
@@ -1136,6 +1300,10 @@ def render() -> None:
         page_validation(frames, filters)
     elif page == "Anomalies":
         page_anomalies(frames, filters)
+    elif page == "Macro lead/lag":
+        page_lead_lag(frames, filters)
+    elif page == "Procurement plan":
+        page_procurement(frames, filters)
     elif page == "Data quality":
         page_quality(frames)
     else:

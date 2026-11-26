@@ -130,12 +130,29 @@ def test_every_page_renders_without_an_exception():
     app.run()
     assert not list(app.exception), [str(error) for error in app.exception]
 
-    for page in dashboard_launch.PAGES:
+    # the landing navigation is the Core tier; the optional views stay out of it
+    assert list(app.sidebar.radio[0].options) == dashboard_launch.CORE_PAGES
+    for page in dashboard_launch.CORE_PAGES:
         app.sidebar.radio[0].set_value(page)
         app.run()
         assert not list(app.exception), (page, [str(error) for error in app.exception])
         # proves the navigation happened rather than re-rendering page one
         assert app.title[0].value == dashboard_launch.PAGE_TITLES[page], page
+
+    app.sidebar.toggle[0].set_value(True)
+    app.run()
+    assert list(app.sidebar.radio[0].options) == dashboard_launch.PAGES
+    for page in dashboard_launch.ADVANCED_PAGES:
+        app.sidebar.radio[0].set_value(page)
+        app.run()
+        assert not list(app.exception), (page, [str(error) for error in app.exception])
+        assert app.title[0].value == dashboard_launch.PAGE_TITLES[page], page
+
+    # switching the tier off must return to a Core view, not leave a dead page selected
+    app.sidebar.toggle[0].set_value(False)
+    app.run()
+    assert not list(app.exception), [str(error) for error in app.exception]
+    assert app.title[0].value == dashboard_launch.PAGE_TITLES["Overview"]
 
     # the overview must actually show numbers, not just an empty shell
     app.sidebar.radio[0].set_value("Overview")

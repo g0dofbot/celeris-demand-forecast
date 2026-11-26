@@ -90,6 +90,12 @@ same slice. Pages:
 | Anomalies | the Phase 2 register by class, kind and severity, with the monthly flag rate |
 | Data quality | the units ledger, Phase 1 diagnostics and the cleaning log |
 | Assumptions | every rule applied, the limitations and the sources |
+| Macro lead/lag (Advanced) | 12-month demand change against each macro driver at lags of ±6 months, and the leading lag per driver |
+| Procurement plan (Advanced) | the P90 buy requirement per SKU × region for a coverage window the planner sets, with list value and CSV download |
+
+The two Advanced views sit behind the sidebar **Advanced views** toggle, so the Core
+seven stay the landing navigation; the threshold table and the P90 plan are still read
+from the same `outputs/` files as everything else.
 
 Two tables exist only for these views and are produced by the pipeline:
 `clean/demand_customer_month.parquet` (order book at customer × channel grain, with
