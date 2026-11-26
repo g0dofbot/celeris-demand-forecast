@@ -59,7 +59,10 @@ Outputs
 -------
 outputs/submission.csv                        Date,SKU_ID,Region,Units_Sold_Forecast
 outputs/forecast/forecast_cell_month.parquet  every test key, every candidate, final + bands
+                             and the list price with its revenue
 outputs/forecast/backtest_scores.csv          candidate x metric
+outputs/forecast/backtest_slices.csv          selected model error by family, region,
+                             business unit and months ahead
 outputs/forecast/backtest_cell_month.parquet  holdout predictions per key
 outputs/forecast/backtest_monthly.parquet     company month: actual vs candidates
 outputs/forecast/forecast_monthly_summary.parquet  company month forecast + band
@@ -298,8 +301,11 @@ def build_panel(tables: dict, report: ForecastReport) -> Panel:
     selected = list(dict.fromkeys([*CELL, *CATEGORICAL_FEATURES, "split", "grid_status",
                                    "post_eol", "target_demand", "target_observed",
                                    "target_is_zero", "cell_absent", "__pair", "__pos",
-                                   *KNOWN_FEATURES, *PARITY_LAG_FEATURES]))
+                                   *KNOWN_FEATURES, *PARITY_LAG_FEATURES, "price"]))
     known = frame[selected].copy()
+    # the list price is carried per cell-month (Phase 3 carries 2026 forward), so
+    # revenue can be shown beside the units without a second price lookup
+    known["unit_price"] = known["price"].astype(float)
     known["__row"] = np.arange(len(known))
 
     categories = {column: sorted(frame[column].dropna().unique().tolist())
@@ -789,6 +795,43 @@ def select_blend_weight(panel: Panel, months: list, origin_position: int,
     return float(chosen["weight"]), frame, inner_position
 
 
+SLICE_DIMENSIONS = {"product_family": "Product_Family", "region": "Region",
+                    "business_unit": "Business_Unit", "horizon_months": "months_ahead"}
+
+
+def slice_scores(scored: pd.DataFrame, model: str) -> pd.DataFrame:
+    """Same WAPE rule applied to family, region, business unit and months ahead.
+
+    Revenue is scored too, because a planner reads a miss on a low-price, high-volume
+    family differently from a miss on a high-price, low-volume one.
+    """
+    rows: list[dict] = []
+
+    def record(dimension: str, value, block: pd.DataFrame) -> None:
+        actual = block["actual"].to_numpy(float)
+        predicted = block[model].to_numpy(float)
+        actual_revenue = block["actual_revenue"].to_numpy(float)
+        forecast_revenue = block["forecast_revenue"].to_numpy(float)
+        rows.append({
+            "model": model, "dimension": dimension, "value": str(value),
+            "rows": int(len(block)),
+            "actual_units": float(actual.sum()), "forecast_units": float(predicted.sum()),
+            "wape": wape(actual, predicted),
+            "bias": _safe_divide(predicted.sum(), actual.sum()) - 1.0,
+            "actual_revenue": float(actual_revenue.sum()),
+            "forecast_revenue": float(forecast_revenue.sum()),
+            "revenue_wape": _safe_divide(np.abs(actual_revenue - forecast_revenue).sum(),
+                                         np.abs(actual_revenue).sum()),
+            "revenue_bias": _safe_divide(forecast_revenue.sum(), actual_revenue.sum()) - 1.0,
+        })
+
+    record("all", "ALL", scored)
+    for dimension, column in SLICE_DIMENSIONS.items():
+        for value, block in scored.groupby(column, dropna=False):
+            record(dimension, value, block)
+    return pd.DataFrame(rows)
+
+
 def backtest(panel: Panel, tables: dict, report: ForecastReport) -> tuple[pd.DataFrame, dict]:
     report.h("2. FORWARD-IN-TIME BACKTEST")
     months = list(panel.months)
@@ -809,7 +852,8 @@ def backtest(panel: Panel, tables: dict, report: ForecastReport) -> tuple[pd.Dat
     predictions = run_all(panel, candidates, scored_positions, blank_from=origin_position)
     scored = collect(panel, predictions, scored_positions)
     scored = scored.merge(panel.known[["__row", *CELL, "Product_Family", "Business_Unit",
-                                       "target_demand"]], on="__row", how="left")
+                                       "unit_price", "target_demand"]],
+                          on="__row", how="left")
     scored = scored.rename(columns={"target_demand": "actual"})
     scored = scored.loc[scored["actual"].notna()].reset_index(drop=True)
     for name in predictions:
@@ -852,6 +896,18 @@ def backtest(panel: Panel, tables: dict, report: ForecastReport) -> tuple[pd.Dat
 
     eligible = scores.loc[scores["bias"].abs() <= BIAS_TOLERANCE]
     selected = (eligible if len(eligible) else scores).sort_values("wape").iloc[0]["model"]
+    position_of = {month: index for index, month in enumerate(months)}
+    scored["months_ahead"] = (scored["Month"].map(position_of).astype(int)
+                              - origin_position + 1)
+    scored["actual_revenue"] = scored["actual"] * scored["unit_price"].fillna(0.0)
+    scored["forecast_revenue"] = scored[selected] * scored["unit_price"].fillna(0.0)
+    slices = slice_scores(scored, selected)
+    report.sub("selected model error by slice")
+    for dimension in ["product_family", "region", "horizon_months"]:
+        block = slices.loc[slices["dimension"].eq(dimension)]
+        worst = block.sort_values("wape", ascending=False)
+        report.p(f"  {dimension:<16}" + ", ".join(
+            f"{row.value}: WAPE {row.wape:.3f}" for row in worst.head(4).itertuples()))
     report.kv("selected model", selected)
     report.rule("FC-BACKTEST", "candidates scored forward in time at the true horizon",
                 "fit strictly before 2025-04, then 19 recursive months",
@@ -865,8 +921,10 @@ def backtest(panel: Panel, tables: dict, report: ForecastReport) -> tuple[pd.Dat
         "blend_weight": blend_weight,
         "blend_weight_curve": weight_curve.to_dict(orient="records"),
         "blend_weight_inner_origin": _month_text(months[inner_position]),
+        "slices": slices.to_dict(orient="records"),
     }
     return scored, {"scores": scores, "monthly": monthly, "selected": selected,
+                    "slices": slices,
                     "origin_position": origin_position, "fit_rows": train_rows,
                     "predictions": predictions, "candidates": candidates,
                     "design": fitted["design"], "blend_weight": blend_weight,
@@ -893,7 +951,8 @@ def final_forecast(panel: Panel, tables: dict, backtest_state: dict,
     candidate_names = list(predictions)
     cells = collect(panel, predictions, horizon_positions)
     cells = cells.merge(panel.known[["__row", *CELL, "split", "grid_status", "post_eol",
-                                     "cell_absent", "Product_Family", "Business_Unit"]],
+                                     "cell_absent", "Product_Family", "Business_Unit",
+                                     "unit_price"]],
                         on="__row", how="left")
     cells["Year"] = cells["Month"].dt.year
     cells["Month_Num"] = cells["Month"].dt.month
@@ -950,9 +1009,18 @@ def add_uncertainty(cells: pd.DataFrame, scored: pd.DataFrame, selected: str,
     inactive = cells["post_eol"].fillna(False).astype(bool)
     cells.loc[inactive, ["forecast_p10", "forecast_p90"]] = 0.0
 
+    # revenue is the units forecast at the list price that Phase 3 carried into
+    # the horizon, so the two can never drift apart
+    price = cells["unit_price"].fillna(0.0)
+    cells["list_price"] = price.round(2)
+    cells["forecast_revenue"] = np.rint(cells["forecast_units"] * price).astype("int64")
+    cells["revenue_p10"] = np.rint(cells["forecast_p10"] * price).astype("int64")
+    cells["revenue_p90"] = np.rint(cells["forecast_p90"] * price).astype("int64")
+
     monthly = cells.groupby("Month").agg(
         forecast=("forecast_units", "sum"), p10=("forecast_p10", "sum"),
-        p90=("forecast_p90", "sum"), cells=("forecast_units", "size"),
+        p90=("forecast_p90", "sum"), revenue=("forecast_revenue", "sum"),
+        cells=("forecast_units", "size"),
         post_eol=("post_eol", "sum")).reset_index()
     ratio_by_month = (scored.groupby("Month").apply(
         lambda block: _safe_divide(block["actual"].sum(), block[selected].sum()),
@@ -962,6 +1030,9 @@ def add_uncertainty(cells: pd.DataFrame, scored: pd.DataFrame, selected: str,
     monthly["ratio_p90"] = high
     monthly["band_p10"] = np.rint(monthly["forecast"] * low).astype("int64")
     monthly["band_p90"] = np.rint(monthly["forecast"] * high).astype("int64")
+    # the revenue band uses the same aggregate ratio as the unit band
+    monthly["revenue_p10"] = np.rint(monthly["revenue"] * low).astype("int64")
+    monthly["revenue_p90"] = np.rint(monthly["revenue"] * high).astype("int64")
     monthly["year"] = monthly["Month"].dt.year
     monthly["month_num"] = monthly["Month"].dt.month
 
@@ -969,6 +1040,7 @@ def add_uncertainty(cells: pd.DataFrame, scored: pd.DataFrame, selected: str,
                                              f"(x{np.exp(-Z80 * sigma):.2f} / "
                                              f"x{np.exp(Z80 * sigma):.2f})")
     report.kv("monthly ratio p10 / p90", f"{low:.2f} / {high:.2f}")
+    report.kv("forecast revenue (19 months)", f"{cells['forecast_revenue'].sum():,.0f} USD")
     report.kv("forecast months with a band", len(monthly))
     report.rule("FC-UNCERTAINTY", "multiplicative error band on the cell forecast",
                 "prediction x exp(+/- 1.28 x sigma), sigma from holdout log ratios",
@@ -977,6 +1049,9 @@ def add_uncertainty(cells: pd.DataFrame, scored: pd.DataFrame, selected: str,
     report.metrics["uncertainty"] = {"sigma_log": sigma,
                                      "monthly_ratio_p10": float(low),
                                      "monthly_ratio_p90": float(high)}
+    report.metrics["revenue"] = {"forecast_revenue": float(cells["forecast_revenue"].sum()),
+                                 "price_source": "Phase 3 list price carried into the horizon",
+                                 "unpriced_cells": int(price.eq(0.0).sum())}
     return cells, monthly, {"sigma_log": sigma, "low": float(low), "high": float(high)}
 
 
@@ -997,7 +1072,7 @@ def build_submission(cells: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 def write_outputs(out_dir: Path, report: ForecastReport, submission: pd.DataFrame,
                   cells: pd.DataFrame, monthly: pd.DataFrame, scores: pd.DataFrame,
                   backtest_cell: pd.DataFrame, backtest_monthly: pd.DataFrame,
-                  diagnostics: dict) -> None:
+                  slices: pd.DataFrame, diagnostics: dict) -> None:
     forecast_dir = out_dir / FORECAST_DIR
     forecast_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1007,13 +1082,15 @@ def write_outputs(out_dir: Path, report: ForecastReport, submission: pd.DataFram
                                 "hurdle_lgbm", "blend")]
     keep = ["__row", *CELL, "Year", "Month_Num", "Product_Family", "Business_Unit",
             "grid_status", "post_eol", *candidates,
-            "forecast_units", "forecast_raw", "forecast_p10", "forecast_p50", "forecast_p90"]
+            "forecast_units", "forecast_raw", "forecast_p10", "forecast_p50", "forecast_p90",
+            "unit_price", "list_price", "forecast_revenue", "revenue_p10", "revenue_p90"]
     cells[[column for column in keep if column in cells.columns]].to_parquet(
         forecast_dir / "forecast_cell_month.parquet", index=False)
     monthly.to_parquet(forecast_dir / "forecast_monthly_summary.parquet", index=False)
     scores.to_csv(forecast_dir / "backtest_scores.csv", index=False)
     backtest_cell.to_parquet(forecast_dir / "backtest_cell_month.parquet", index=False)
     backtest_monthly.to_parquet(forecast_dir / "backtest_monthly.parquet", index=False)
+    slices.to_csv(forecast_dir / "backtest_slices.csv", index=False)
     pd.DataFrame(report.log).to_csv(forecast_dir / "forecast_rules.csv", index=False)
     (forecast_dir / "model_diagnostics.json").write_text(
         json.dumps(jsonable(diagnostics), indent=2), encoding="utf-8")
@@ -1037,6 +1114,7 @@ def write_outputs(out_dir: Path, report: ForecastReport, submission: pd.DataFram
             "backtest_scores": "outputs/forecast/backtest_scores.csv",
             "backtest_cell_month": "outputs/forecast/backtest_cell_month.parquet",
             "backtest_monthly": "outputs/forecast/backtest_monthly.parquet",
+            "backtest_slices": "outputs/forecast/backtest_slices.csv",
             "model_diagnostics": "outputs/forecast/model_diagnostics.json",
         },
     }
@@ -1181,6 +1259,22 @@ def main(argv: list[str] | None = None) -> int:
     report.verdict("forecast path is reproducible",
                    final_state["reproducible"], "identical predictions on a second pass")
     report.verdict("uncertainty bands are ordered and non-negative", ordered)
+    report.verdict("every forecast cell is priced and revenue reconciles",
+                   bool(cells["forecast_revenue"].notna().all())
+                   and abs(float(monthly["revenue"].sum())
+                           - float(cells["forecast_revenue"].sum())) <= 1.0
+                   # revenue is rounded per cell, so the identity closes to half a
+                   # dollar per key rather than to the cent on the grand total
+                   and abs(float(cells["forecast_revenue"].sum())
+                           - float((cells["forecast_units"]
+                                    * cells["unit_price"].fillna(0.0)).sum()))
+                   <= 0.5 * len(cells),
+                   f"{fmt(cells['forecast_revenue'].sum())} USD at the list price")
+    report.verdict("backtest error is sliced by family, region and horizon",
+                   {"product_family", "region", "horizon_months"}
+                   <= set(backtest_state["slices"]["dimension"])
+                   and bool(backtest_state["slices"]["wape"].notna().all()),
+                   f"{len(backtest_state['slices'])} slice rows")
     report.verdict("submission grain is unique", not submission.duplicated().any())
 
     naive_wape = float(scores.loc[scores["model"].eq("seasonal_naive"), "wape"].iloc[0])
@@ -1217,7 +1311,7 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     write_outputs(out_dir, report, submission, cells, monthly, scores, scored,
-                  backtest_state["monthly"], diagnostics)
+                  backtest_state["monthly"], backtest_state["slices"], diagnostics)
 
     print("\n".join(report.lines))
     print(f"\nSUBMISSION -> {out_dir / 'submission.csv'}")

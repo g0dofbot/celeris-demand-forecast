@@ -15,12 +15,20 @@ Check the outputs headlessly (what ``python run_pipeline.py --phase 5`` does):
 
 Pages
 -----
-Overview       19-month demand outlook, band, and the numbers a planner needs
+Overview        demand and revenue outlook, family / region / channel mix
+Demand explorer family -> SKU -> region -> customer drill-down, flagged events
 Forecast       monthly and SKU-level forecast with filters and a CSV download
-Validation     the forward-in-time backtest: candidates, monthly fit, worst keys
+Validation     the forward-in-time backtest: candidates, monthly fit, by slice
 Anomalies      the Phase 2 register, filterable, with the monthly flag rate
 Data quality   the Phase 1 units ledger, cleaning log and price repairs
 Assumptions    every rule the pipeline applied, in one place
+
+Shared filters
+--------------
+The sidebar carries one set of filters (family, SKU, region, channel, customer)
+that every view reads, so the training side and the forecast side always show
+the same slice.  The forecast itself is SKU x region, so the channel and
+customer filters narrow the order-book views (overview, explorer, anomalies).
 """
 from __future__ import annotations
 
@@ -42,6 +50,7 @@ REQUIRED: dict[str, str] = {
     "forecast_cells": "forecast/forecast_cell_month.parquet",
     "forecast_monthly": "forecast/forecast_monthly_summary.parquet",
     "backtest_scores": "forecast/backtest_scores.csv",
+    "backtest_slices": "forecast/backtest_slices.csv",
     "backtest_monthly": "forecast/backtest_monthly.parquet",
     "anomalies": "anomalies/anomaly_register.parquet",
     "monthly_summary": "anomalies/monthly_summary.parquet",
@@ -51,6 +60,7 @@ REQUIRED: dict[str, str] = {
     "feature_rules": "features/feature_rules.csv",
     "forecast_rules": "forecast/forecast_rules.csv",
     "demand_monthly": "clean/demand_monthly.parquet",
+    "demand_customer": "clean/demand_customer_month.parquet",
     "forecast_report": "forecast_report.json",
     "submission": "submission.csv",
 }
@@ -67,9 +77,11 @@ OPTIONAL: dict[str, str] = {
     "features_report": "features_report.json",
     "profile_report": "profile_report.json",
 }
-PAGES = ["Overview", "Forecast", "Validation", "Anomalies", "Data quality", "Assumptions"]
+PAGES = ["Overview", "Demand explorer", "Forecast", "Validation", "Anomalies",
+         "Data quality", "Assumptions"]
 PAGE_TITLES = {
     "Overview": "Planning overview",
+    "Demand explorer": "Demand explorer",
     "Forecast": "Forecast explorer",
     "Validation": "Backtest and validation",
     "Anomalies": "Anomaly register",
@@ -77,6 +89,9 @@ PAGE_TITLES = {
     "Assumptions": "Assumptions and limitations",
 }
 TABLE_SUFFIXES = {".parquet", ".csv"}
+FILTER_KEYS = {"family": "flt_family", "sku": "flt_sku", "region": "flt_region",
+               "channel": "flt_channel", "customer": "flt_customer"}
+HISTORY_COLUMNS = ("Product_Family", "SKU_ID", "Region", "Sales_Channel", "Customer_Name")
 
 
 # --------------------------------------------------------------------------- #
@@ -289,6 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     anomalies = tables["anomalies"]
     ledger = tables["reconciliation"]
     scores = tables["backtest_scores"]
+    customers = tables["demand_customer"]
+    slices = tables["backtest_slices"]
 
     verdict("every required output is present and readable", ok,
             presence_detail(rows, missing))
@@ -325,12 +342,28 @@ def main(argv: list[str] | None = None) -> int:
     verdict("monthly summary and forecast bands reconcile",
             abs(float(monthly["forecast"].sum()) - float(cells["forecast_units"].sum())) <= 1.0,
             f"{monthly['forecast'].sum():,.0f} vs {cells['forecast_units'].sum():,.0f}")
+    verdict("forecast cells carry price and revenue",
+            "forecast_revenue" in cells.columns
+            and bool(cells["forecast_revenue"].notna().all())
+            and abs(float(monthly["revenue"].sum())
+                    - float(cells["forecast_revenue"].sum())) <= 1.0,
+            f"${monthly['revenue'].sum():,.0f} over {len(monthly)} months")
+    verdict("customer table can serve the drill-down",
+            {"Customer_Name", "Sales_Channel", "revenue_recomputed", "observed_units"}
+            <= set(customers.columns) and customers["Customer_Name"].nunique() > 1,
+            f"{len(customers):,} rows, {customers['Customer_Name'].nunique()} customers, "
+            f"{customers['Sales_Channel'].nunique()} channels")
+    verdict("backtest accuracy is sliced by family, region and horizon",
+            {"product_family", "region", "horizon_months"} <= set(slices["dimension"])
+            and bool(slices["wape"].notna().all()),
+            f"{len(slices)} slice rows across {slices['dimension'].nunique()} dimensions")
 
     lines.append("")
     lines.append(f"  elapsed seconds                                 {time.time() - started:,.1f}")
     payload = _payload(verdicts, rows)
     payload["kpis"] = {
         "forecast_units": float(cells["forecast_units"].sum()),
+        "forecast_revenue": float(cells["forecast_revenue"].sum()),
         "forecast_months": int(cells["Month"].nunique()),
         "forecast_keys": int(len(cells)),
         "first_month_units": float(monthly["forecast"].iloc[0]),
@@ -373,10 +406,97 @@ def report(frames: dict, name: str) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# shared widgets
+# shared widgets and filters
 # --------------------------------------------------------------------------- #
 def month_axis(frame: pd.DataFrame, column: str = "Month") -> pd.Series:
     return pd.to_datetime(frame[column])
+
+
+def _multiselect(label: str, options: list, key: str):
+    """A multiselect whose stale values never survive a changed option list."""
+    chosen = [value for value in st.session_state.get(key, []) if value in options]
+    if st.session_state.get(key) != chosen:
+        st.session_state[key] = chosen
+    return st.multiselect(label, options, key=key)
+
+
+def _select(label: str, options: list, key: str):
+    """A selectbox that falls back to its first option when the pool changes."""
+    if st.session_state.get(key) not in options:
+        st.session_state[key] = options[0]
+    return st.selectbox(label, options, key=key)
+
+
+def shared_filters(frames: dict) -> dict:
+    """One filter set for every page; options cascade down the hierarchy."""
+    history = frames["demand_customer"]
+    st.sidebar.markdown("**Shared filters**")
+    family = _multiselect("Product family",
+                          sorted(history["Product_Family"].dropna().unique()),
+                          FILTER_KEYS["family"])
+    pool = history.loc[history["Product_Family"].isin(family)] if family else history
+    sku = _multiselect("SKU", sorted(pool["SKU_ID"].dropna().unique()), FILTER_KEYS["sku"])
+    pool = pool.loc[pool["SKU_ID"].isin(sku)] if sku else pool
+    region = _multiselect("Region", sorted(pool["Region"].dropna().unique()), FILTER_KEYS["region"])
+    pool = pool.loc[pool["Region"].isin(region)] if region else pool
+    channel = _multiselect("Sales channel",
+                           sorted(pool["Sales_Channel"].dropna().unique()),
+                           FILTER_KEYS["channel"])
+    pool = pool.loc[pool["Sales_Channel"].isin(channel)] if channel else pool
+    customer = _multiselect("Customer",
+                            sorted(pool["Customer_Name"].dropna().unique()),
+                            FILTER_KEYS["customer"])
+    if st.sidebar.button("Clear filters"):
+        for key in FILTER_KEYS.values():
+            st.session_state[key] = []
+        st.rerun()
+    st.sidebar.caption("Channel and customer narrow the order-book views; the forecast is "
+                       "SKU x region.")
+    return {"family": family, "sku": sku, "region": region,
+            "channel": channel, "customer": customer}
+
+
+def apply_history_filters(frame: pd.DataFrame, filters: dict,
+                          columns: tuple[str, ...] = HISTORY_COLUMNS) -> pd.DataFrame:
+    """Apply the shared filters to any table that carries those columns."""
+    mapping = {"Product_Family": filters["family"], "SKU_ID": filters["sku"],
+               "Region": filters["region"], "Sales_Channel": filters["channel"],
+               "Customer_Name": filters["customer"]}
+    view = frame
+    for column in columns:
+        chosen = mapping.get(column) or []
+        if chosen:
+            view = view.loc[view[column].isin(chosen)]
+    return view
+
+
+def apply_cell_filters(cells: pd.DataFrame, filters: dict) -> pd.DataFrame:
+    """Apply the shared filters to the SKU x region forecast cells."""
+    view = cells
+    if filters["family"]:
+        view = view.loc[view["Product_Family"].isin(filters["family"])]
+    if filters["sku"]:
+        view = view.loc[view["SKU_ID"].isin(filters["sku"])]
+    if filters["region"]:
+        view = view.loc[view["Region"].isin(filters["region"])]
+    return view
+
+
+def filtered_history(frames: dict, filters: dict) -> pd.DataFrame:
+    """Monthly order-book units and revenue for the shared slice.
+
+    With no channel or customer filter this returns the panel's unconstrained
+    demand (stockout-suppressed units restored); otherwise it returns observed
+    units from the customer grain, because suppression is only logged per cell.
+    """
+    if not any(filters.values()):
+        panel = frames["demand_monthly"]
+        monthly = panel.groupby("Month", as_index=False).agg(
+            units=("demand_units", "sum"), revenue=("revenue_recomputed", "sum"))
+        return monthly
+    history = apply_history_filters(frames["demand_customer"], filters)
+    return history.groupby("Month", as_index=False).agg(
+        units=("observed_units", "sum"), revenue=("revenue_recomputed", "sum"))
 
 
 def band_chart(history: pd.DataFrame, forecast: pd.DataFrame, title: str,
@@ -405,6 +525,37 @@ def band_chart(history: pd.DataFrame, forecast: pd.DataFrame, title: str,
     return figure
 
 
+def revenue_chart(history: pd.DataFrame, forecast: pd.DataFrame, title: str) -> go.Figure:
+    """Booked revenue bars against the forecast revenue line."""
+    figure = go.Figure()
+    if len(history):
+        figure.add_trace(go.Bar(x=month_axis(history), y=history["revenue"],
+                                name="booked revenue", marker_color="#1f4e79"))
+    if len(forecast):
+        figure.add_trace(go.Scatter(x=month_axis(forecast), y=forecast["revenue"],
+                                    name="forecast revenue", mode="lines+markers",
+                                    line=dict(color="#d67828", width=2)))
+    figure.update_layout(title=title, height=380, hovermode="x unified",
+                         legend=dict(orientation="h", y=1.02, x=0),
+                         margin=dict(l=10, r=10, t=70, b=10), yaxis_title="USD")
+    return figure
+
+
+def mix_chart(frame: pd.DataFrame, dimension: str, value: str, title: str,
+              top: int = 8) -> go.Figure:
+    """Share of revenue by one dimension, largest first."""
+    grouped = (frame.groupby(dimension)[value].sum().sort_values(ascending=False)
+               .head(top).reset_index())
+    total = float(grouped[value].sum())
+    grouped["share"] = grouped[value] / total if total else 0.0
+    figure = px.bar(grouped, x="share", y=dimension, orientation="h", title=title,
+                    height=320, text=grouped["share"].map(lambda share: f"{share:.0%}"))
+    figure.update_traces(textposition="outside", cliponaxis=False)
+    figure.update_layout(margin=dict(l=10, r=10, t=50, b=10), xaxis_tickformat=".0%",
+                         xaxis_title="share of revenue", yaxis_title="")
+    return figure
+
+
 def kpi_row(items: list[tuple[str, str, str | None]]) -> None:
     columns = st.columns(len(items))
     for column, (label, value, delta) in zip(columns, items):
@@ -419,25 +570,35 @@ def frame_download(frame: pd.DataFrame, name: str, label: str) -> None:
 # --------------------------------------------------------------------------- #
 # page: overview
 # --------------------------------------------------------------------------- #
-def page_overview(frames: dict) -> None:
+def page_overview(frames: dict, filters: dict) -> None:
     monthly = frames["forecast_monthly"].copy().sort_values("Month")
     summary = frames["monthly_summary"].copy().sort_values("Month")
-    cells = frames["forecast_cells"]
-    scores = frames["backtest_scores"].set_index("model")
-    anomalies = frames["anomalies"]
-
     monthly["Month"] = month_axis(monthly)
     summary["Month"] = month_axis(summary)
-    trailing = float(summary["demand_units"].tail(12).mean())
-    average = float(monthly["forecast"].mean())
+
+    cells = apply_cell_filters(frames["forecast_cells"], filters)
+    anomalies = apply_history_filters(frames["anomalies"], filters,
+                                      columns=("SKU_ID", "Region"))
+    history = filtered_history(frames, filters)
+    scores = frames["backtest_scores"].set_index("model")
     shipped = scores.loc["blend"]
+
+    if cells.empty:
+        st.info("No forecast cells match the shared filters.")
+        return
+
+    outlook = cells.groupby("Month", as_index=False).agg(
+        units=("forecast_units", "sum"), revenue=("forecast_revenue", "sum"))
+    outlook["Month"] = month_axis(outlook)
+    run_rate = float(outlook["units"].mean())
+    trailing = float(history["units"].tail(12).mean()) if len(history) else 0.0
 
     st.markdown("### Where the business is heading")
     kpi_row([
-        ("19-month demand", f"{cells['forecast_units'].sum():,.0f}", None),
-        ("Monthly run rate", f"{average:,.0f}", f"{average / trailing - 1:+.1%} vs trailing"),
-        ("Next month", f"{monthly['forecast'].iloc[0]:,.0f}",
-         f"{monthly['forecast'].iloc[0] / float(summary['demand_units'].iloc[-1]) - 1:+.1%} vs last actual"),
+        ("19-month demand", f"{outlook['units'].sum():,.0f}", None),
+        ("19-month revenue", f"${outlook['revenue'].sum() / 1e6:,.2f}M", None),
+        ("Monthly run rate", f"{run_rate:,.0f}",
+         f"{run_rate / trailing - 1:+.1%} vs trailing" if trailing else None),
     ])
     kpi_row([
         ("Backtest WAPE", f"{shipped['wape']:.3f}", f"{shipped['skill_vs_naive']:+.1%} vs naive"),
@@ -445,22 +606,46 @@ def page_overview(frames: dict) -> None:
         ("Anomalies flagged", f"{len(anomalies):,}", None),
     ])
 
-    history = pd.DataFrame({"Month": summary["Month"], "value": summary["demand_units"]})
-    forecast = pd.DataFrame({"Month": monthly["Month"], "value": monthly["forecast"],
-                             "low": monthly["band_p10"], "high": monthly["band_p90"]})
-    st.plotly_chart(band_chart(history, forecast, "Company demand and the 19-month outlook"),
+    ratio_low = float(monthly["ratio_p10"].iloc[0])
+    ratio_high = float(monthly["ratio_p90"].iloc[0])
+    units = pd.DataFrame({"Month": outlook["Month"], "value": outlook["units"],
+                          "low": outlook["units"] * ratio_low,
+                          "high": outlook["units"] * ratio_high})
+    st.plotly_chart(band_chart(history.rename(columns={"units": "value"}), units,
+                               "Demand and the 19-month outlook"), width="stretch")
+    st.plotly_chart(revenue_chart(history, outlook, "Booked revenue and the forecast at list price"),
                     width="stretch")
+    st.caption("Revenue is the units forecast at the list price Phase 3 carried into the "
+               "horizon; the band on units is the holdout monthly ratio.")
+
+    st.markdown("### Mix")
+    mixes = st.columns(3)
+    with mixes[0]:
+        st.plotly_chart(mix_chart(cells, "Product_Family", "forecast_revenue",
+                                  "Forward revenue by family"), width="stretch")
+    with mixes[1]:
+        st.plotly_chart(mix_chart(cells, "Region", "forecast_revenue",
+                                  "Forward revenue by region"), width="stretch")
+    with mixes[2]:
+        recent = frames["demand_customer"]
+        recent = recent.loc[recent["Month"] > recent["Month"].max() - pd.DateOffset(months=12)]
+        recent = apply_history_filters(recent, filters)
+        if len(recent):
+            st.plotly_chart(mix_chart(recent, "Sales_Channel", "revenue_recomputed",
+                                      "Booked revenue by channel (12m)"), width="stretch")
+        else:
+            st.info("No booked revenue for this slice.")
+    st.caption("Family and region use the forward revenue; channel mix comes from the order "
+               "book because the forecast is channel-agnostic.")
 
     left, right = st.columns([3, 2])
     with left:
         st.markdown("**Next six months**")
-        table = monthly.head(6)[["Month", "forecast", "band_p10", "band_p90", "p10", "p90"]].copy()
+        table = monthly.head(6)[["Month", "forecast", "revenue", "band_p10", "band_p90"]].copy()
         table["Month"] = table["Month"].dt.strftime("%Y-%m")
-        table.columns = ["Month", "Forecast", "Total p10", "Total p90",
-                         "Sum of cell p10", "Sum of cell p90"]
+        table.columns = ["Month", "Forecast units", "Revenue USD", "Units p10", "Units p90"]
         st.dataframe(table.round(0), width="stretch", hide_index=True)
-        st.caption("Use the total band for planning totals; the per-cell band is not additive "
-                   "and is only meaningful key by key.")
+        st.caption("The monthly band is the aggregate holdout ratio, not a sum of cell bands.")
     with right:
         st.markdown("**Largest demand events**")
         events = anomalies.loc[anomalies["kind"].eq("DEMAND_EVENT")].copy()
@@ -471,14 +656,128 @@ def page_overview(frames: dict) -> None:
             top["Month"] = pd.to_datetime(top["Month"]).dt.strftime("%Y-%m")
             st.dataframe(top, width="stretch", hide_index=True)
         else:
-            st.info("No demand events registered.")
+            st.info("No demand events in this slice.")
+
+
+# --------------------------------------------------------------------------- #
+# page: demand explorer
+# --------------------------------------------------------------------------- #
+def page_explorer(frames: dict, filters: dict) -> None:
+    history = apply_history_filters(frames["demand_customer"], filters)
+    register = apply_history_filters(frames["anomalies"], filters,
+                                     columns=("SKU_ID", "Region"))
+    panel = frames["demand_monthly"]
+
+    st.markdown("### Family, SKU, region, customer")
+    if history.empty:
+        st.info("No observed demand matches the shared filters.")
+        return
+
+    controls = st.columns(4)
+    with controls[0]:
+        family = _select("Product family",
+                         ["All", *sorted(history["Product_Family"].unique())],
+                         "exp_family")
+    pool = history if family == "All" else history.loc[history["Product_Family"].eq(family)]
+    with controls[1]:
+        sku = _select("SKU", ["All", *sorted(pool["SKU_ID"].unique())], "exp_sku")
+    pool = pool if sku == "All" else pool.loc[pool["SKU_ID"].eq(sku)]
+    with controls[2]:
+        region = _select("Region", ["All", *sorted(pool["Region"].unique())], "exp_region")
+    pool = pool if region == "All" else pool.loc[pool["Region"].eq(region)]
+    with controls[3]:
+        customer = _select("Customer", ["All", *sorted(pool["Customer_Name"].unique())],
+                           "exp_customer")
+    view = pool if customer == "All" else pool.loc[pool["Customer_Name"].eq(customer)]
+
+    label = " / ".join(part for part in [family, sku, region, customer] if part != "All")
+    st.caption(f"Slice: {label or 'everything shared filters allow'} - "
+               f"{view['Customer_Name'].nunique()} customers, "
+               f"{view['SKU_ID'].nunique()} SKUs, {len(view):,} order-book rows.")
+
+    orders = view.groupby("Month", as_index=False).agg(
+        units=("observed_units", "sum"), revenue=("revenue_recomputed", "sum"),
+        customers=("Customer_Name", "nunique"), orders=("orders", "sum"))
+    cells = panel.merge(view[["SKU_ID", "Region"]].drop_duplicates(),
+                        on=["SKU_ID", "Region"], how="inner")
+    cells = cells.loc[cells["lifecycle_ok"] & cells["demand_units"].notna()]
+    restored = cells.groupby("Month", as_index=False).agg(
+        demand=("demand_units", "sum"), suppressed=("suppressed_units", "sum"))
+    series = (orders.merge(restored, on="Month", how="outer").sort_values("Month")
+              .reset_index(drop=True))
+    series[["units", "revenue", "demand", "suppressed", "orders", "customers"]] = (
+        series[["units", "revenue", "demand", "suppressed", "orders", "customers"]]
+        .fillna(0.0))
+
+    figure = go.Figure()
+    figure.add_trace(go.Bar(x=series["Month"], y=series["suppressed"],
+                            name="stockout-suppressed units",
+                            marker_color="rgba(180,60,60,0.30)"))
+    figure.add_trace(go.Scatter(x=series["Month"], y=series["units"],
+                                name="observed units", mode="lines+markers",
+                                line=dict(color="#1f4e79", width=2)))
+    figure.add_trace(go.Scatter(x=series["Month"], y=series["demand"],
+                                name="unconstrained demand", mode="lines",
+                                line=dict(color="#2e7d32", width=2, dash="dot")))
+
+    flags = register.loc[register["Month"].notna()].copy()
+    if len(flags):
+        flags = flags.groupby(["Month", "anomaly_class"], as_index=False).agg(
+            impact=("impact", "sum"))
+        flags = flags.merge(series[["Month", "units"]], on="Month", how="inner")
+        if len(flags):
+            markers = px.scatter(flags, x="Month", y="units", color="anomaly_class",
+                                 hover_data=["impact"], symbol="anomaly_class")
+            for trace in markers.data:
+                trace.update(mode="markers",
+                             marker=dict(size=12, line=dict(width=1, color="white")),
+                             hovertemplate="%{x|%Y-%m}<br>%{fullData.name}<br>"
+                                           "impact %{customdata[0]:,.0f}<extra></extra>")
+                figure.add_trace(trace)
+
+    figure.update_layout(title=f"Demand on the time series - {label or 'shared slice'}",
+                         height=440, hovermode="x unified",
+                         legend=dict(orientation="h", y=-0.18, x=0),
+                         margin=dict(l=10, r=10, t=60, b=10), yaxis_title="units")
+    st.plotly_chart(figure, width="stretch")
+    st.caption("Diamonds are flagged anomalies; hover for the class and its impact. "
+               "The gap between observed and unconstrained demand is demand the stockout "
+               "log documents.")
+
+    left, right = st.columns([3, 2])
+    with left:
+        st.markdown("**Monthly detail**")
+        table = series.copy()
+        table["Month"] = table["Month"].dt.strftime("%Y-%m")
+        table = table[["Month", "orders", "units", "demand", "suppressed", "revenue"]]
+        table.columns = ["Month", "Orders", "Observed units", "Demand units",
+                         "Suppressed units", "Revenue USD"]
+        st.dataframe(table.round(0), width="stretch", hide_index=True)
+        frame_download(table, "celeris_demand_slice.csv", "Download this slice")
+    with right:
+        st.markdown("**Revenue by customer**")
+        by_customer = (view.groupby("Customer_Name")["revenue_recomputed"].sum()
+                       .sort_values(ascending=False).head(10).reset_index())
+        by_customer.columns = ["Customer", "Revenue USD"]
+        st.dataframe(by_customer.round(0), width="stretch", hide_index=True)
+        st.markdown("**Revenue by channel**")
+        by_channel = (view.groupby("Sales_Channel")["revenue_recomputed"].sum()
+                      .sort_values(ascending=False).reset_index())
+        by_channel.columns = ["Channel", "Revenue USD"]
+        st.dataframe(by_channel.round(0), width="stretch", hide_index=True)
+
+    st.markdown("**Cell revenue by SKU and region**")
+    pivot = (view.pivot_table(index="SKU_ID", columns="Region",
+                              values="revenue_recomputed", aggfunc="sum")
+             .fillna(0.0).round(0))
+    st.dataframe(pivot, width="stretch")
 
 
 # --------------------------------------------------------------------------- #
 # page: forecast
 # --------------------------------------------------------------------------- #
-def page_forecast(frames: dict) -> None:
-    cells = frames["forecast_cells"].copy()
+def page_forecast(frames: dict, filters: dict) -> None:
+    cells = apply_cell_filters(frames["forecast_cells"].copy(), filters)
     monthly = frames["forecast_monthly"].copy()
     monthly["Month"] = month_axis(monthly)
     cells["Month"] = month_axis(cells)
@@ -508,8 +807,8 @@ def page_forecast(frames: dict) -> None:
 
     ratio_low = float(monthly["ratio_p10"].iloc[0])
     ratio_high = float(monthly["ratio_p90"].iloc[0])
-    series = view.groupby("Month", as_index=False)["forecast_units"].sum().rename(
-        columns={"forecast_units": "value"})
+    series = view.groupby("Month", as_index=False)[["forecast_units", "forecast_revenue"]].sum()
+    series["value"] = series["forecast_units"]
     series["low"] = series["value"] * ratio_low
     series["high"] = series["value"] * ratio_high
     st.plotly_chart(band_chart(pd.DataFrame(columns=["Month", "value"]), series,
@@ -517,7 +816,11 @@ def page_forecast(frames: dict) -> None:
                     width="stretch")
     st.caption("The band applies the holdout monthly ratio (p10/p90) to the slice total.")
 
-    st.markdown("**Family x month**")
+    st.markdown("**Forecast revenue**")
+    st.metric("19-month revenue in this slice", f"${series['forecast_revenue'].sum():,.0f}")
+    st.caption("Units x the list price Phase 3 carried into the horizon, key by key.")
+
+    st.markdown("**Family x month (units)**")
     pivot = (view.pivot_table(index="Product_Family", columns="Month",
                               values="forecast_units", aggfunc="sum")
              .fillna(0).round(0))
@@ -526,10 +829,11 @@ def page_forecast(frames: dict) -> None:
 
     st.markdown("**Cell detail**")
     detail = view[["Month", "SKU_ID", "Region", "Product_Family", "forecast_units",
-                   "forecast_p10", "forecast_p90", "grid_status", "post_eol"]].copy()
+                   "forecast_p10", "forecast_p90", "list_price", "forecast_revenue",
+                   "grid_status", "post_eol"]].copy()
     detail["Month"] = detail["Month"].dt.strftime("%Y-%m")
     detail.columns = ["Month", "SKU", "Region", "Family", "Forecast", "p10", "p90",
-                      "Grid status", "Post-EOL"]
+                      "List price", "Revenue", "Grid status", "Post-EOL"]
     st.dataframe(detail.head(500), width="stretch", hide_index=True)
     if len(detail) > 500:
         st.caption(f"Showing 500 of {len(detail):,} rows - download for the full slice.")
@@ -539,11 +843,12 @@ def page_forecast(frames: dict) -> None:
 # --------------------------------------------------------------------------- #
 # page: validation
 # --------------------------------------------------------------------------- #
-def page_validation(frames: dict) -> None:
+def page_validation(frames: dict, filters: dict) -> None:
     scores = frames["backtest_scores"].copy()
     backtest = frames["backtest_monthly"].copy()
     backtest["Month"] = month_axis(backtest)
     diagnostics = report(frames, "model_diagnostics")
+    slices = frames["backtest_slices"].copy()
 
     st.markdown("### Forward-in-time backtest")
     origin = diagnostics.get("holdout_origin", "n/a")
@@ -576,6 +881,41 @@ def page_validation(frames: dict) -> None:
                          legend=dict(orientation="h", y=1.02, x=0))
     st.plotly_chart(figure, width="stretch")
 
+    st.markdown("### Accuracy by slice")
+    selected = diagnostics.get("selected", "blend")
+    mine = slices.loc[slices["model"].eq(selected)]
+    tabs = st.tabs(["By product family", "By region", "By horizon", "By business unit"])
+    tab_dimensions = [("product_family", "Product_Family"), ("region", "Region"),
+                      ("horizon_months", None), ("business_unit", "Business_Unit")]
+    for tab, (dimension, filter_column) in zip(tabs, tab_dimensions):
+        with tab:
+            block = mine.loc[mine["dimension"].eq(dimension)].copy()
+            if filter_column is not None:
+                chosen = filters["family"] if filter_column == "Product_Family" else (
+                    filters["region"] if filter_column == "Region" else [])
+                if chosen:
+                    block = block.loc[block["value"].isin(chosen)]
+            if block.empty:
+                st.info("No backtest rows for this slice.")
+                continue
+            block = block.sort_values("wape", ascending=False)
+            chart = px.bar(block, x="wape", y="value", orientation="h",
+                           title=f"Cell WAPE by {dimension.replace('_', ' ')} "
+                                 f"({selected})", height=340)
+            chart.update_layout(margin=dict(l=10, r=10, t=60, b=10),
+                                xaxis_tickformat=".0%", xaxis_title="WAPE",
+                                yaxis_title="")
+            st.plotly_chart(chart, width="stretch")
+            table = block[["value", "rows", "actual_units", "forecast_units", "wape",
+                           "bias", "revenue_wape", "revenue_bias"]].copy()
+            for column in ["wape", "bias", "revenue_wape", "revenue_bias"]:
+                table[column] = (table[column] * 100).round(1)
+            table["actual_units"] = table["actual_units"].round(0)
+            table["forecast_units"] = table["forecast_units"].round(0)
+            table.columns = ["Slice", "Rows", "Actual units", "Forecast units",
+                             "WAPE %", "Bias %", "Revenue WAPE %", "Revenue bias %"]
+            st.dataframe(table, width="stretch", hide_index=True)
+
     left, right = st.columns(2)
     with left:
         curve = pd.DataFrame(diagnostics.get("blend_weight_curve", []))
@@ -590,9 +930,10 @@ def page_validation(frames: dict) -> None:
         st.markdown("**Worst keys in the holdout**")
         cells = frames.get("backtest_cells")
         if cells is not None and len(cells):
+            cells = cells.loc[cells["SKU_ID"].isin(filters["sku"])] if filters["sku"] else cells
+            cells = cells.loc[cells["Region"].isin(filters["region"])] if filters["region"] else cells
             worst = cells.assign(error=(cells["blend"] - cells["actual"]).abs()).nlargest(
-                12, "error")[["Month", "SKU_ID", "Region", "actual", "blend", "error"]]
-            worst = worst.copy()
+                12, "error")[["Month", "SKU_ID", "Region", "actual", "blend", "error"]].copy()
             worst["Month"] = pd.to_datetime(worst["Month"]).dt.strftime("%Y-%m")
             worst.columns = ["Month", "SKU", "Region", "Actual", "Forecast", "Abs error"]
             st.dataframe(worst.round(0), width="stretch", hide_index=True)
@@ -608,8 +949,9 @@ def page_validation(frames: dict) -> None:
 # --------------------------------------------------------------------------- #
 # page: anomalies
 # --------------------------------------------------------------------------- #
-def page_anomalies(frames: dict) -> None:
-    register = frames["anomalies"].copy()
+def page_anomalies(frames: dict, filters: dict) -> None:
+    register = apply_history_filters(frames["anomalies"].copy(), filters,
+                                     columns=("SKU_ID", "Region"))
     summary = frames["monthly_summary"].copy()
     summary["Month"] = month_axis(summary)
     register["Month"] = month_axis(register)
@@ -617,6 +959,10 @@ def page_anomalies(frames: dict) -> None:
     st.markdown("### Anomaly register")
     st.caption("Data errors are repaired in Phase 1 and listed here for audit; demand events are "
                "kept in the training data and explained, never overwritten.")
+
+    if register.empty:
+        st.info("No registered anomalies match the shared filters.")
+        return
 
     classes = register["anomaly_class"].value_counts().rename_axis("class").reset_index(
         name="rows")
@@ -701,7 +1047,7 @@ def page_quality(frames: dict) -> None:
 LIMITATIONS = """
 - **Price after 2026 is carried forward.** No 2027/2028 list price exists in the delivered data,
   so the forecast assumes the 2026 price holds. Cells affected are flagged
-  `price_imputed_future` in `outputs/features/`.
+  `price_imputed_future` in `outputs/features/`, and forecast revenue inherits that assumption.
 - **Post-EOL keys are zero by rule.** 156 test keys fall after their SKU's EOL month; the ERP
   records no sales there, so they are forecast at 0 rather than extrapolated.
 - **Cell-level error is dominated by one-off orders.** A whole-cell WAPE near 0.41 is mostly
@@ -715,7 +1061,10 @@ LIMITATIONS = """
 - **Digit-shift suspects are flagged, not repaired.** Phase 2 records 86 suspected
   digit-shift cells; the training data keeps the values and the register explains them.
 - **Demand, not shipments.** The target is unconstrained demand: units the stockout log shows
-  were requested but not served are restored before modelling.
+  were requested but not served are restored before modelling. The customer view keeps
+  observed units, because suppression is only logged per SKU and region.
+- **The forecast is channel-agnostic.** It is produced per SKU and region, so channel and
+  customer mix is shown from the order book, not from the forecast.
 """
 
 
@@ -777,15 +1126,18 @@ def render() -> None:
         return
 
     frames = load(out_dir)
+    filters = shared_filters(frames)
     st.title(PAGE_TITLES[page])
     if page == "Overview":
-        page_overview(frames)
+        page_overview(frames, filters)
+    elif page == "Demand explorer":
+        page_explorer(frames, filters)
     elif page == "Forecast":
-        page_forecast(frames)
+        page_forecast(frames, filters)
     elif page == "Validation":
-        page_validation(frames)
+        page_validation(frames, filters)
     elif page == "Anomalies":
-        page_anomalies(frames)
+        page_anomalies(frames, filters)
     elif page == "Data quality":
         page_quality(frames)
     else:

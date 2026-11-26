@@ -1,8 +1,8 @@
 {
   "meta": {
     "phase": 2,
-    "generated_at": "2026-11-25T16:46:23",
-    "runtime_seconds": 10.59,
+    "generated_at": "2026-11-26T16:29:24",
+    "runtime_seconds": 7.91,
     "pandas": "3.0.6",
     "numpy": "2.5.5",
     "python": "3.14.5"

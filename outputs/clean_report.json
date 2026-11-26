@@ -1,8 +1,8 @@
 {
   "meta": {
     "phase": 1,
-    "generated_at": "2026-11-25T16:46:11",
-    "runtime_seconds": 37.25,
+    "generated_at": "2026-11-26T16:29:15",
+    "runtime_seconds": 55.97,
     "pandas": "3.0.6",
     "numpy": "2.5.5",
     "python": "3.14.5"
@@ -158,6 +158,13 @@
         "suppressed_only": 145
       }
     },
+    "customer_demand": {
+      "rows": 243813,
+      "customers": 12,
+      "channels": 4,
+      "observed_units": 12021188.0,
+      "revenue": 8805375602.735
+    },
     "reconciliation": {
       "raw_rows": 248248,
       "duplicate_rows": 3682,
@@ -255,6 +262,12 @@
       "check": "units ledger reaches sales_clean",
       "ok": true,
       "detail": "12,056,692 vs 12,056,692"
+    },
+    {
+      "phase": 1,
+      "check": "customer table reconciles to the demand panel",
+      "ok": true,
+      "detail": "243,813 rows, 12,021,188 observed units, 8,805,375,602.735 revenue"
     },
     {
       "phase": 1,
@@ -547,6 +560,7 @@
     "sales_clean": "outputs/clean/sales_clean.parquet",
     "sku_master_clean": "outputs/clean/sku_master_clean.parquet",
     "demand_monthly": "outputs/clean/demand_monthly.parquet",
+    "demand_customer_month": "outputs/clean/demand_customer_month.parquet",
     "demand_grid": "outputs/clean/demand_grid.parquet",
     "stockouts_clean": "outputs/clean/stockouts_clean.parquet",
     "macro_clean": "outputs/clean/macro_clean.parquet",

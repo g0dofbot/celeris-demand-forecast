@@ -77,15 +77,36 @@ The dashboard reads exclusively from `outputs/`; it never touches `student_data/
 and never re-runs the pipeline, so re-run the phase that produces a table before
 expecting it to change.
 
+The sidebar carries **one filter set** — family, SKU, region, channel, customer —
+shared by every view, so the order-book side and the forecast side always show the
+same slice. Pages:
+
+| Page | What it answers |
+| --- | --- |
+| Overview | 19-month units and revenue, book-vs-forecast revenue, family / region / channel mix |
+| Demand explorer | family → SKU → region → customer drill-down, unconstrained vs observed demand, anomalies marked on the time series |
+| Forecast | units, band and revenue by slice, family × month, cell detail, CSV download |
+| Validation | candidates on the holdout, and WAPE / bias by product family, region, business unit and months ahead (units and revenue) |
+| Anomalies | the Phase 2 register by class, kind and severity, with the monthly flag rate |
+| Data quality | the units ledger, Phase 1 diagnostics and the cleaning log |
+| Assumptions | every rule applied, the limitations and the sources |
+
+Two tables exist only for these views and are produced by the pipeline:
+`clean/demand_customer_month.parquet` (order book at customer × channel grain, with
+price and revenue) and `forecast/backtest_slices.csv` (holdout error per slice).
+The channel and customer filters narrow the order-book views; the forecast itself is
+SKU × region, and revenue is the units forecast at the list price Phase 3 carries
+into the horizon.
+
 ### Hosted on Streamlit Community Cloud
 
 Vercel cannot host this app: it runs Python only as framework-preset functions
 (FastAPI/Flask/Django, 300 s cap), and `streamlit run` starts its own server that
 Vercel has no way to launch. Community Cloud runs the server as-is.
 
-The 25 files the dashboard declares (`REQUIRED` + `OPTIONAL` in
-`src/dashboard_launch.py`, ~13 MB) are committed even though `outputs/` is
-git-ignored, so a Cloud build has data without running the pipeline first.
+The 27 files the dashboard declares (`REQUIRED` + `OPTIONAL` in
+`src/dashboard_launch.py`) are committed even though `outputs/` is git-ignored, so
+a Cloud build has data without running the pipeline first.
 
 * Repository `g0dofbot/celeris-demand-forecast`, branch `main`
 * Entrypoint `src/dashboard_launch.py`
@@ -122,7 +143,7 @@ and invariants; they skip cleanly when `outputs/` has not been generated yet.
 run_pipeline.py     phase runner (re-execs into .venv, isolates subprocesses)
 src/                one module per phase
 tests/              per-phase contract tests
-outputs/            generated artifacts (git-ignored, except the 25 the dashboard reads)
+outputs/            generated artifacts (git-ignored, except the 27 the dashboard reads)
 student_data/       input CSVs (git-ignored)
 logs/               run logs (git-ignored)
 ```

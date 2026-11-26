@@ -31,6 +31,8 @@ Outputs (outputs/clean/)
 sales_clean.parquet        deduplicated row-level fact table, cleaned + flagged
 sku_master_clean.parquet   canonical product master with lifecycle months
 demand_monthly.parquet     (Month, SKU, Region) observed vs unconstrained demand
+demand_customer_month.parquet  order-book view at customer x channel grain,
+                           with unit price and recomputed revenue
 demand_grid.parquet        every SKU-Region-month cell with an explicit status
 stockouts_clean.parquet    stockout log with recomputed fill rate
 macro_clean.parquet        deduplicated, gap-filled monthly macro series
@@ -1024,6 +1026,51 @@ def build_demand(sales: pd.DataFrame, stockouts: pd.DataFrame, master: pd.DataFr
     return panel, grid
 
 
+CUSTOMER_GRAIN = ["Month", "SKU_ID", "Region", "Customer_Name", "Sales_Channel"]
+
+
+def build_customer_demand(sales: pd.DataFrame, report: CleanReport) -> pd.DataFrame:
+    """Order-book view of the same eligible rows the demand panel is built from.
+
+    The panel is (Month, SKU, Region); the control tower also has to answer "who
+    bought it" and "through which channel", so the eligible rows are aggregated
+    once more at customer grain.  Stockout suppression is **not** distributed
+    over customers - the log only knows a SKU-Region shortfall - so this table
+    carries observed units and the panel keeps the restored demand.  The two
+    reconcile on units and revenue, which is what the exit check asserts.
+    """
+    report.h("7B. CUSTOMER AND CHANNEL DEMAND")
+    eligible = sales[sales["lifecycle_ok"] & ~sales["Region"].eq("Unknown")
+                     & sales["Month"].notna()]
+    frame = eligible.groupby(CUSTOMER_GRAIN).agg(
+        orders=("Record_ID", "size"),
+        observed_units=("Units_Sold_Clean", lambda s: s.sum(min_count=1)),
+        unit_price=("Price_Clean_USD", "first"),
+        revenue_recomputed=("Revenue_Recomputed_USD", lambda s: s.sum(min_count=1)),
+        Product_Family=("Product_Family", "first"),
+        Business_Unit=("Business_Unit", "first"),
+    ).reset_index()
+    frame["observed_units"] = frame["observed_units"].fillna(0.0)
+    frame["revenue_recomputed"] = frame["revenue_recomputed"].fillna(0.0)
+    frame["Year"] = frame["Month"].dt.year
+    frame["Month_Num"] = frame["Month"].dt.month
+    frame = frame.sort_values(CUSTOMER_GRAIN).reset_index(drop=True)
+
+    report.kv("grain", f"{len(frame):,} rows at (Month, SKU, Region, Customer, Channel)")
+    report.kv("customers / channels", f"{frame['Customer_Name'].nunique()} / "
+                                     f"{frame['Sales_Channel'].nunique()}")
+    report.kv("observed units", fmt(frame["observed_units"].sum()))
+    report.kv("revenue", fmt(frame["revenue_recomputed"].sum()))
+    report.metrics["customer_demand"] = {
+        "rows": len(frame),
+        "customers": int(frame["Customer_Name"].nunique()),
+        "channels": int(frame["Sales_Channel"].nunique()),
+        "observed_units": float(frame["observed_units"].sum()),
+        "revenue": float(frame["revenue_recomputed"].sum()),
+    }
+    return frame
+
+
 # --------------------------------------------------------------------------- #
 # 8. reconciliation + outputs
 # --------------------------------------------------------------------------- #
@@ -1211,6 +1258,7 @@ def main(argv: list[str] | None = None) -> int:
     macro = clean_macro(raw, report)
     events = clean_events(raw, master, test, report)
     panel, grid = build_demand(sales, stockouts, master, report)
+    customers = build_customer_demand(sales, report)
     reconciliation = build_reconciliation(report)
 
     label_map = pd.DataFrame(report.label_rows).drop_duplicates(
@@ -1241,6 +1289,13 @@ def main(argv: list[str] | None = None) -> int:
     report.verdict("units ledger reaches sales_clean",
                    abs(recon["units_clean_ledger"] - recon["units_clean"]) <= 0.5,
                    f"{fmt(recon['units_clean_ledger'])} vs {fmt(recon['units_clean'])}")
+    customer_units = float(customers["observed_units"].sum())
+    customer_revenue = float(customers["revenue_recomputed"].sum())
+    report.verdict("customer table reconciles to the demand panel",
+                   abs(customer_units - float(panel["observed_units"].sum())) <= 0.5
+                   and abs(customer_revenue - float(panel["revenue_recomputed"].sum())) <= 1.0,
+                   f"{len(customers):,} rows, {fmt(customer_units)} observed units, "
+                   f"{fmt(customer_revenue)} revenue")
     report.verdict("units ledger reaches the demand panel",
                    abs(recon["units_usable_ledger"] - recon["units_usable"]) <= 0.5
                    and abs(recon["units_demand_ledger"] - recon["demand_units"]) <= 0.5,
@@ -1272,6 +1327,7 @@ def main(argv: list[str] | None = None) -> int:
         "sales_clean": sales,
         "sku_master_clean": master,
         "demand_monthly": panel,
+        "demand_customer_month": customers,
         "demand_grid": grid,
         "stockouts_clean": stockouts,
         "macro_clean": macro,
